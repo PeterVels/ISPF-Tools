@@ -1,0 +1,260 @@
+/* Rexx edit macro to parse JCL and produce a table */
+signal on novalue
+address 'ISPEXEC' 'tbcreate pvjcl',
+                  'names(stepname,pgmname,ddname,dsn,disp)',
+                  'nowrite replace'
+address 'ISREDIT'
+'macro () NOPROCESS'
+'(linedata) = line' 1
+parse var linedata '//' jobname .
+'(zlast) = linenum .zlast'
+do i = 2 to zlast
+ '(linedata) = line' i
+ linedata = space(linedata)
+ select
+  when left(linedata,3) = '//*' | left(linedata,2) <> '//' then
+   iterate /* ignore comments or stuff other than JCL */
+
+  when linedata = '//' then
+   do
+    stepname = '== EOJ ='; pgmname = jobname; ddname = '= EOJ =='
+    disp = '==============='
+    dsn = '*** Logical end of Job ***'
+    address 'ISPEXEC' 'tbadd pvjcl'
+    if rc <> 0 then
+     say 'RC' rc 'on EOJ'
+   end
+
+  when wordpos('JOB',linedata) = 2 then
+   parse var linedata '//' jobname ' JOB ' . /* save jobname for EOJ msg */
+  when wordpos('DD',linedata) = 2 then /* start of a DD */
+   do
+    parse var linedata '//' ddname ' DD ' ddstmnt comments
+    if pos('SYSTSIN',ddname) > 0 then
+     call look_for_db2_program
+    stepname = ''; pgmname = '' /* "blank when same" in ISPF table */
+    if pos('.',ddname) > 0 then  /* deal with PROC overrides */
+     ddname = substr(ddname,lastpos('.',ddname)+1)
+    do while right(ddstmnt,1) = ',' /* DD is continued on next line */
+     i = i + 1
+     '(linedata) = line' i
+     parse var linedata '//' nextline comments
+     ddstmnt = ddstmnt || nextline
+    end
+    call parse_DD_statement
+    if dsn = '>> Output in SDSF' then
+     disp = ''
+    address 'ISPEXEC' 'tbadd pvjcl'
+    if rc <> 0 then
+     say 'RC' rc 'on DD' ddname
+   end
+  when wordpos('EXEC',linedata) = 2 then /* start of EXEC card */
+   do
+    ddname = '';dsn = ''; disp = ''
+    parse var linedata '//' stepname 'EXEC PGM=' pgmname ',' parms
+    if pgmname = '' then
+     do
+      parse var linedata '//' stepname 'EXEC' pgmname ',' parms /* PROC */
+      ddname = '<- PROC'
+     end
+    pgmname = strip(pgmname)
+    address 'ISPEXEC' 'tbadd pvjcl'
+    if rc <> 0 then
+     say 'RC' rc 'on EXEC'
+   end
+  when wordpos('IF',linedata)    = 2 |  ,
+       wordpos('ENDIF',linedata) = 2 |  ,
+       wordpos('ELSE',linedata)  = 2 then
+   do
+    stepname = ''
+    pgmname  = ''
+    ddname   = ''
+    disp     = '  >>  '
+    dsn      = substr(linedata,3)
+    address 'ISPEXEC' 'tbadd pvjcl'
+    if rc <> 0 then
+     say 'RC' rc 'on IF/ELSE/ENDIF'
+   end
+  otherwise
+   nop
+ end
+end
+stepname = '== EOJ ='; pgmname = jobname; ddname = '= EOJ =='
+disp = '==============='
+dsn = '*** Physical end of Job ***'
+address 'ISPEXEC' 'tbadd pvjcl'
+if rc <> 0 then
+ say 'RC' rc 'on EOJ'
+
+panel = 'pvjcl'
+panel_lib  = userid()'.TEMP.PANEL.D' || random(100000)
+call housekeeping /* clean up after any previous abend */
+call allocate_panel
+call populate_panel
+address 'ISPEXEC'
+'tbtop  pvjcl'
+'tbdispl pvjcl panel(pvjcl)'
+call housekeeping(2)
+exit
+parse_DD_statement:
+if ddstmnt = '*' then
+ do
+  dsn = '<< INPUT (Instream data)'
+  disp = ''
+  return
+ end
+if ddstmnt = 'DUMMY' then
+ do
+  dsn = 'DUMMY (ignored)'
+  disp= ''
+  return
+ end
+/* DSN */
+parse var ddstmnt 'DSN=' bit_after_dsn ',' .
+select
+ when bit_after_dsn = '' then
+  do /* TEST for a UNIX path */
+   parse var ddstmnt 'PATH=' bit_after_path ',' .
+   if bit_after_path = '' then
+    dsn= ''
+   else
+    dsn = bit_after_path
+  end
+ otherwise
+   dsn = bit_after_dsn
+end
+if dsn = '' then
+ do
+  parse var ddstmnt 'SYSOUT=' sysout ','
+  if sysout = '' then
+   dsn = 'No DSN --> temporary data set'
+  else
+   dsn = '>> Output in SDSF'
+ end
+if substr(dsn,1,1) = '*' then
+ dsn = dsn 'Referback --> temp dsn'
+if left(dsn,2) = '&&' then
+ dsn = dsn '(temp dsn)'
+/* Conversion special...to shorten the file name for display purposes
+if substr(dsn,2,6) = 'ICZD.R' then   */
+if length(dsn) > 30 then
+ dsn = '..' || right(dsn,32)
+
+/* DISP */
+parse var ddstmnt 'DISP=' bit_after_disp .
+select
+ when bit_after_disp = '' then
+  disp= ''
+ when left(bit_after_disp,1) <> '(' then
+  parse var bit_after_disp disp ',' .
+ otherwise
+  do
+   if substr(bit_after_disp,2,1) = "," then
+    do
+     disp = translate(bit_after_disp,' ',',')
+     parse var disp '(' disp ')' .
+     disp = 'NEW' strip(disp)
+    end
+   else
+    do
+     parse var bit_after_disp '(' dispwords ')'
+     disp = translate(dispwords,' ',',')
+    end
+  end
+end
+if disp = '' then
+ disp = 'NEW (dflt)'
+return
+
+look_for_db2_program:
+if pos('.',ddname) > 0 then
+ ddname = substr(ddname,pos('.',ddname)+1)
+if right(space(linedata),4) <> 'DD *' then
+ return
+line# = i
+systsin = ''
+db2pgm = ''
+do until left(strip(systsin),2) = '//'
+ line# = line# + 1
+ if line# > zlast then leave
+ '(systsin) = line' line#
+ if pos('RUN PROGRAM',systsin) > 0 then
+  parse var systsin 'RUN PROGRAM(' db2pgm ')' .
+ else
+  parse var systsin 'RUN PROG(' db2pgm ')' .
+ if db2pgm <> '' then
+  do
+   stepname = '';disp = 'DB2 prog-->';dsn = db2pgm; pgmname = ''
+   address ISPEXEC 'tbadd pvjcl'
+   leave
+  end
+end
+return
+
+NOVALUE:
+parse source  sys_id  how_invokt  exec_name  DD_nm  DS_nm,
+                  as_invokt  cmd_env  addr_spc  usr_tokn
+say exec_name "raised NOVALUE at line" sigl
+say " "
+say "The referenced variable is" condition("D")
+say " "
+zsigl = sigl
+if sourceline() <> "0" then
+   say sourceline(zsigl)
+exit
+
+/* Embedded panel follows */
+populate_panel:
+queue ")ATTR DEFAULT({+_)                                                      "
+queue " + type(text)   caps(off) skip(on)                                      "
+queue " ! type(text)   caps(off) skip(on) color(yellow)                        "
+queue " \ type(output) caps(off) skip(on)                                      "
+queue " $ type(output) caps(off) skip(on) color(turquoise)                     "
+queue " # type(output)           skip(on) color(white)                         "
+queue " _ type(input)  hilite(uscore)                                          "
+queue " @ type(text) intens(low) color(green) caps(off) skip(on)               "
+queue ")BODY                                                                   "
+queue "       \ztimel  \DateN +  PV JCL Displayer "
+queue "+Command ===>_zcmd                                                    ",
+                                    "+==>_zusc+"
+queue "!Stepname Program  DDname   Disposition       Data Set or UNIX Path     "
+queue "+-------- -------- -------- ----------------- -------------------------",
+   || "----------"
+queue ")MODEL                                                                  "
+queue "$stepname$pgmname \ddname  \disp             \dsn                      ",
+   || "          "
+queue ")INIT                                                                   "
+queue ")PROC                                                                   "
+queue ")END                                                                    "
+queue ''
+address 'ISPEXEC'
+'LMINIT DATAID(DAID) DDNAME(PANELS)'
+'LMOPEN DATAID(' || daid || ') OPTION(OUTPUT)'
+do QUEUED()
+   parse PULL pline
+   'LMPUT DATAID(' || daid || ') MODE(INVAR)' ,
+                 'DATALOC(PLINE) DATALEN(80)'
+end
+'LMMADD  DATAID(' || daid || ') MEMBER(' || panel || ')'
+'LMCLOSE DATAID(' || daid || ')'
+'LMFREE  DATAID(' || daid || ')'
+"LIBDEF ISPPLIB DATASET ID('"panel_lib"') STACK"
+return
+
+housekeeping:
+arg parm
+if parm = 2 then
+ address ISPEXEC "LIBDEF ISPPLIB"
+address TSO
+x = MSG('OFF')
+'FREE DD(PANELS)'
+"DEL '"panel_lib"'"
+x = MSG('ON')
+return
+
+allocate_panel:
+address TSO
+"ALLOC DD(PANELS) DA('"panel_lib"')" ,
+         "NEW UNIT(SYSALLDA) SPACE(1 1) TRACKS" ,
+         "DIR(1) RECFM(F B) LRECL(80) BLKSIZE(0)"
+return
