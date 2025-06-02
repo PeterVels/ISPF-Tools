@@ -1,0 +1,159 @@
+/* Rexx to display CPU% */
+/* Commands available:
+
+   M     - Mark as Unclassified and sanitise fields
+*/
+signal on novalue
+debug = 0
+red = '01'x ; yellow = '02'x ; white = '03'x ; green = '04'x ; turq = '05'x
+red_no_highlight = '06'x; green_no_highlight = '07'x ; blue = '08'x
+pink = '09'x
+bar1 = '9F'x  /*  */
+bar2 = '>'
+secret = 0
+command = ''
+c2 = ''
+address ISPEXEC
+do forever
+ dynvar = ''
+ call mainline
+ 'display panel(pvcpupct)'
+ if rc <> 0 then
+  leave
+ command = translate(strip(zcmd))
+ c1 = left(command,1)
+ c2 = left(command,2)
+ if c1 = 'M' then
+  do
+   secret = 1
+   bar1 = '-'
+   bar2 = '|'
+  end
+ else
+  do
+   secret = 0
+   bar1 = '9F'x
+   bar2 = '>'
+  end
+end
+exit
+
+mainline:
+rc=isfcalls('ON')
+call part1
+/* call part2 */
+call part3
+rc=isfcalls('OFF')
+return
+
+part1:
+/* isfsysname = '*' RACF! */
+/* isfsort = 'SYSNAME D'  */
+isfprefix = "JES2" /* Pick something that's running everywhere */
+isffilter = ""
+isfcols = 'JNAME SCPU SYSNAME SLCPU'
+address sdsf "isfexec da" /* (alternate delayed)" */
+if RC <> 0 then
+ do
+  call msgrtn
+  return
+ end
+if isfrows = 0 then
+   say 'No matching rows - bug in part1. Better call Pete'
+else
+ do
+  dynvar = dynvar || turq || copies(' ',79)
+  dynvar = dynvar || turq || left('How busy is this LPAR?',79)
+  dynvar = dynvar || turq || copies(' ',79)
+  DO ix = 1 TO ISFROWS
+   select
+    when scpu.ix > 98 then
+      barcolour = red
+    when scpu.ix > 90 then
+      barcolour = yellow
+    when scpu.ix > 50 then
+      barcolour = white
+    otherwise
+      barcolour = green
+   end
+   barchart = copies(bar1,scpu.ix % 3) || bar2
+   dynvar = dynvar barcolour  || ,
+            left(  sysname.ix  ,
+                   barchart    ,
+                   scpu.ix                    || turq,
+               ,78)
+  end
+ end
+return
+
+part3:
+isffilter = "GCPUSE GE 1"
+isfprefix = "**"
+isfcols = 'JNAME GCPUSE OWNERID JOBID SYSNAME'
+isfsort = 'GCPUSE D'
+address sdsf "isfexec da (alternate delayed)"
+if RC <> 0 then
+ do
+  call msgrtn
+  return
+ end
+if isfrows = 0 then
+   say 'No matching rows - no single job is taking more than 1% of the CPU?'
+else
+ do
+  dynvar = dynvar || turq || copies(' ',79)
+  dynvar = dynvar || turq || ,
+  left('Jobname   Owner    Name                       CPU%',79)
+  divider = turq || left(copies(bar1,8)'  'copies(bar1,7)'  'copies(bar1,25),
+                 ' 'copies(bar1,5),79)
+  DO ix = 1 TO ISFROWS
+   barchart = copies(bar1,GCPUSE.ix % 3) || bar2 || turq
+   select
+    when GCPUSE.ix > 50 then
+     barcolour = red
+    when GCPUSE.ix > 25 then
+     barcolour = yellow
+    when GCPUSE.ix > 10 then
+     barcolour = white
+    otherwise
+     barcolour = green
+   end
+   owner = ownerid.ix
+   if secret then
+    do
+     jname.ix = left(jname.ix,3) || '-----'
+     owner    = left(owner,2)    || '------'
+    end
+   if strip(owner) = '' then
+    do
+     jname_colour = blue
+     owner = 'n/a'
+     fullname = ' '
+    end
+   else
+    do
+     jname_colour = yellow
+     if left(owner,1) = 'U' then
+      fullname = nicename(owner)
+     else
+      fullname = ' '
+    end
+   person = turq || left(fullname,25) || white
+   dynvar = dynvar || ,
+            left( jname_colour      || left(jname.ix,8) ,
+                   red_no_highlight || left(owner,7) ,
+                          person    || ,
+                             turq   || right('00000'GCPUSE.ix,5) ,
+                          barcolour || barchart,80)
+  end
+ end
+return
+
+msgrtn: procedure expose isfmsg isfmsg2.
+if isfmsg<>"" then
+   say "ISFMSG is:" isfmsg
+
+do m=1 to isfmsg2.0
+  say "ISFMSG2."m "is:" isfmsg2.m
+end
+return

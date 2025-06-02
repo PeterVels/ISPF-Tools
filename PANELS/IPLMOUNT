@@ -1,0 +1,15 @@
+)ATTR
+  + type(text)    skip(on) color(yellow)
+  \ type(text)    skip(on) color(blue)
+  $ type(output)  color (yellow)
+  ! type(output)  color (turquoise)
+  # type(output)  color (white)
+)BODY
+                 +IPL Mounts
++Command ===>_ZCMD                                              +Scroll ==>_SCRL
++
+)MODEL
+$ts          #fs
+)INIT
+)PROC
+)END

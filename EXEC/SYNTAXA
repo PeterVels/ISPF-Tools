@@ -1,0 +1,71 @@
+/* Rexx to perform a syntax check on an Assembler program */
+/* Thanks to Stephan Kraus for the idea :-)               */
+shhh = msg('OFF')
+"free fi(ceeopts)" /* Having CEEOPTS allocated can ABEND this Rexx! */
+loud = msg('ON')
+address ISREDIT
+"macro (show) NOPROCESS"
+"(mem) = member"
+"(dsn) = dataset"
+"(zlast) = linenum .zlast"
+address ISPEXEC
+"vget (cicsload pvsyns1 pvsyns2 pvsyns3 pvsyns4 pvsyns5 pvsyns6 pvsynd1",
+      "pvsynd2 pvsynd3 pvsynd4 pvsynd5 pvsynd6 cics db2 viewlist) PROFILE"
+if show <> '' then do
+  'display panel(pvsyntax)'
+  if rc <> 0 then
+   exit 0
+  "vput (cicsload pvsyns1 pvsyns2 pvsyns3 pvsyns4 pvsyns5 pvsyns6 pvsynd1",
+        "pvsynd2 pvsynd3 pvsynd4 pvsynd5 pvsynd6 cics db2 viewlist) PROFILE"
+ end
+address TSO
+call free_em
+"alloc fi(sysin) da('"dsn"("mem")') shr"
+syslibs = 'SYS1.MACLIB SYS1.MODGEN'
+do i = 1 to 6
+ interpret "tempval = pvsyns" || i
+ if tempval <> '' then
+  syslibs = syslibs',' "'"tempval"'"
+end
+
+"alloc fi(syspunch) dummy"
+"alloc fi(syslin) dummy"
+"alloc fi(sysut1) new space(2 2) CYL"
+"alloc fi(sysprint) new cyl space(5 5)"
+parms = 'NOTERM'
+"alloc fi(syslib) da("syslibs") shr"
+"CALL *(ASMA90) '"parms"'"
+if viewlist = 'Y' then do
+  address ISPEXEC
+  "lminit dataid(dataid) ddname(sysprint) enq(shr)"
+  "view dataid("dataid")"
+  "lmfree dataid(dataid)"
+ end
+address TSO
+"execio * diskr sysprint (stem in. finis)"
+call free_em
+address ISREDIT
+errors = 0
+'(line1) = line 1'
+do i = in.0 to 1 by -1
+ if substr(in.i,2,7) = '** ASMA' then do
+  if length(in.i) < 71 then do
+    msg = substr(in.i,2,70)
+    "line_after 0 = msgline (msg)"
+  end
+  else do
+    msg1 = substr(in.i,2,70)
+    msg2 = substr(in.i,71)
+    "line_after 0 = msgline (msg2)"
+    "line_after 0 = msgline (msg1)"
+  end
+ end
+end
+exit
+
+free_em:
+address TSO
+shhh = msg('OFF')
+"free fi(sysut1 sysprint syslin syspunch sysin syslib dbrmlib junk)"
+talk = msg('ON')
+return

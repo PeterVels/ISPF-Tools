@@ -1,0 +1,87 @@
+/* Rexx to take the output of a RLIST and turn it into RACF commands */
+/* Designed to work with GCICSTRN members */
+signal on novalue
+#lines = 0
+address ISREDIT
+"macro () NOPROCESS"
+"f p'=' first"
+
+do forever
+ "f 'GCICSTRN'"
+ if RC <> 0 then leave
+ "(l c) = cursor"
+ "(linedata) = line" l
+ parse var linedata 'GCICSTRN' group .
+ call add('RDELETE GCICSTRN' group)
+ call add('RDEFINE GCICSTRN' group)
+ "f 'RESOURCES IN GROUP'"
+ if RC <> 0 then do
+   say 'Error in GCICSTRN list - missing RESOURCES IN GROUP' group
+   exit rc
+ end
+ "(l c) = cursor"
+ l = l + 2
+ "(linedata) = line" l
+ do while strip(linedata) <> ''
+  parse var linedata member type .
+/*if type = '(G)' then type = 'GENERIC'
+  else type = '' */
+  call add('RALTER GCICSTRN 'group' ADDMEM('member')') /* 'type) */
+  l = l + 1
+  "(linedata) = line" l
+ end
+ "f ' 00  '"
+ if rc <> 0 then do
+  say 'Did not find the OWNER line'
+  exit rc
+ end
+ "(l c) = cursor"
+ "(linedata) = line" l
+ parse var linedata level owner uacc . warn .
+ call add('RALTER GCICSTRN' group 'UACC('uacc') OWNER('owner')')
+ "f 'INSTALLATION DATA'"
+ if rc <> 0 then do
+  say 'Did not find INSTALLATION DATA'
+  exit RC
+ end
+ "(l c) = cursor"
+ l = l + 2
+ "(install) = line" l
+ call add("RALTER GCICSTRN" group "DATA('"strip(install)"')")
+ "find 'USER      ACCESS   ACCESS COUNT'"
+ if RC <> 0 then do
+  say 'Did not find ACCESS line'
+  exit RC
+ end
+ "(l c) = cursor"
+ l = l + 2
+ "(linedata) = line" l
+ do while strip(linedata) <> ''
+ parse var linedata id access .
+  if id <> 'ID' & access <> 'USERS' then
+    call add('PERMIT' group 'CL(GCICSTRN) ID('id') ACCESS('access')')
+  l = l + 1
+  "(linedata) = line" l
+ end
+end
+call add('SETROPTS REFRESH RACLIST(TCICSTRN)')
+
+lines.0 = #lines
+address TSO
+shhh = msg('OFF')
+dsn = "'"userid()".GCICSTRN.RACF.COMMANDS'"
+"delete" dsn
+loud = msg('ON')
+"alloc fi(outfile) da("dsn") new catalog recfm(f) lrecl(200)
+       cyl space(1 1)"
+"execio * diskW outfile (stem line. finis)"
+"free  fi(outfile)"
+address ISPEXEC "view dataset("dsn")"
+
+exit
+
+add:
+arg aline
+#lines = #lines + 1
+line.#lines = aline
+return

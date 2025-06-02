@@ -1,0 +1,49 @@
+)attr
+ _ type(input) hilite(uscore) color(green) caps(ON)
+ + type(text)  skip(on)
+ @ type(text)  skip(on)       color(blue)
+)body expand(\\)
+%\-\ SYNTAX \-\
+%Command ===>_ZCMD                                                             +
++
++ CICS? _z+   (Y/N)  CICS load library:_cicsload                               +
++ DB2?  _z+   (Y/N)               @e.g. DFH540.CICS.SDFHLOAD
++ View compiler listing?   _z+   (Y/N)
++
++ Enter COPYBOOK libraries
++ SYSLIB: _pvsyns1                                     +
+          _pvsyns2                                     +
+          _pvsyns3                                     +
+          _pvsyns4                                     +
+          _pvsyns5                                     +
+          _pvsyns6                                     +
++
++ Enter DB2 DCLGEN libraries
++ DCLLIB: _pvsynd1                                     +
+          _pvsynd2                                     +
+          _pvsynd3                                     +
+          _pvsynd4                                     +
+          _pvsynd5                                     +
+          _pvsynd6                                     +
++
+)init
+ .zvars='(cics db2 viewlist)'
+ .cursor = cics
+)proc
+ ver(&cics,list,Y,N)
+ ver(&db2,list,Y,N)
+ ver(&viewlist,list,Y,N)
+ ver(&cicsload,dsname)
+ ver(&pvsyns1,dsname)
+ ver(&pvsyns2,dsname)
+ ver(&pvsyns3,dsname)
+ ver(&pvsyns4,dsname)
+ ver(&pvsyns5,dsname)
+ ver(&pvsyns6,dsname)
+ ver(&pvsynd1,dsname)
+ ver(&pvsynd2,dsname)
+ ver(&pvsynd3,dsname)
+ ver(&pvsynd4,dsname)
+ ver(&pvsynd5,dsname)
+ ver(&pvsynd6,dsname)
+)end

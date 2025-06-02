@@ -1,0 +1,190 @@
+/* Generates and displays a Mandelbrot set as an ISPF panel */
+signal on novalue
+address ISPEXEC
+"vget (zscreend zscreenw)"
+panel_chars = '0123456789abcdefghijklmnopqrstuvwxyz'
+minRE = -2; maxRE = +1;  /* initial seed values */
+minIM = -1; maxIM = +1;
+iterations = 36
+panel = 'mandelbr'
+panel_lib  = 'TEMP.PANEL.D'random(100000)
+call housekeeping
+call allocate_panel
+call populate_panel
+do forever
+ call mainline
+ 'display panel('panel')'
+ if rc <> 0 then leave
+/* call process_cursor */
+ call handle_pfkeys
+end
+call housekeeping 'REMOVE'
+exit
+
+handle_pfkeys:
+IMrange = maxIM - minIM
+RErange = maxRE - minRE
+select
+ when pfkey = 'PF19' then               /* zoom in */
+  do
+   minIM = minIM + (IMrange / 4)
+   maxIM = maxIM - (IMrange / 4)
+   minRE = minRE + (RErange / 4)
+   maxRE = maxRE - (RErange / 4)
+/* iterations = iterations * 2 */
+  end
+ when pfkey = 'PF20' then               /* zoom out */
+  do
+   minIM = minIM - (IMrange / 4)
+   maxIM = maxIM + (IMrange / 4)
+   minRE = minRE - (RErange / 4)
+   maxRE = maxRE + (RErange / 4)
+/* iterations = iterations / 2   */
+  end
+ when pfkey = 'PF07' then
+  do
+   minIM = minIM - (IMrange / 4)
+   maxIM = maxIM - (IMrange / 4)
+  end
+ when pfkey = 'PF08' then
+  do
+   minIM = minIM + (IMrange / 4)
+   maxIM = maxIM + (IMrange / 4)
+  end
+ when pfkey = 'PF10' then
+  do
+   minRE = minRE - (RErange / 4)
+   maxRE = maxRE - (RErange / 4)
+  end
+ when pfkey = 'PF11' then
+  do
+   minRE = minRE + (RErange / 4)
+   maxRE = maxRE + (RErange / 4)
+  end
+ otherwise
+  nop
+end
+return
+
+process_cursor:
+'vget (zscreenc)' /* get cursor position */
+cursline = (zscreenc - zscreenw ) % zscreenw
+if cursline > 1 then
+ do                  /* convert cursor position to a value in range */
+  curscol = zscreenc - (cursline * zscreenw)
+  minRE = curscol  % zscreenw * stepX + minRE
+  minIM = cursline % zscreend * stepY + minIM
+ end
+return
+
+mainline:
+if minRE = '' | maxRE = '' | minIM = '' | maxIM = '' then
+ do
+  minRE = -2; maxRE = +1;  /* initial seed values */
+  minIM = -1; maxIM = +1;
+ end
+stepX = (maxRE - minRE) / zscreenw
+stepY = (maxIM - minIM) / zscreend
+shadow = ''
+  do y = 0 for zscreend
+   im = minIM + stepY * y
+   do x = 0 for zscreenw
+    re = minRE + stepX*x
+    zr = re
+    zi = im
+    do n = 0 for iterations
+     a = zr ** 2
+     b = zi ** 2
+     if a + b > 4 then leave
+     zi = zr * zi * 2 + im
+     zr = a - b + re
+    end
+   shadow = shadow || substr(panel_chars, n+1, 1)
+   end
+  end
+vars = 'Real:' minRE '-' MaxRE  'Imaginary:' minIM '-' maxIM
+return
+
+populate_panel:
+queue ')ATTR'
+queue '$ area(dynamic) extend(on) scroll(on)'
+queue '# type(output) caps(off) color(turquoise)'
+queue '0 type(char) intens(non)'
+queue '1 type(char) hilite(reverse) color(Blue)'
+queue '2 type(char) hilite(reverse) color(Red)'
+queue '3 type(char) hilite(reverse) color(Pink)'
+queue '4 type(char) hilite(reverse) color(Green)'
+queue '5 type(char) hilite(reverse) color(Turquoise)'
+queue '6 type(char) hilite(reverse) color(Yellow)'
+queue '7 type(char) hilite(reverse) color(White)'
+queue '8 type(char) intens(non)'
+queue '9 type(char) hilite(reverse) color(Blue)'
+queue 'a type(char) hilite(reverse) color(Red)'
+queue 'b type(char) hilite(reverse) color(Pink)'
+queue 'c type(char) hilite(reverse) color(Green)'
+queue 'd type(char) hilite(reverse) color(Turquoise)'
+queue 'e type(char) hilite(reverse) color(Yellow)'
+queue 'f type(char) hilite(reverse) color(White)'
+queue 'g type(char) intens(non)'
+queue 'h type(char) hilite(reverse) color(Blue)'
+queue 'i type(char) hilite(reverse) color(Red)'
+queue 'j type(char) hilite(reverse) color(Pink)'
+queue 'k type(char) hilite(reverse) color(Green)'
+queue 'l type(char) hilite(reverse) color(Turquoise)'
+queue 'm type(char) hilite(reverse) color(Yellow)'
+queue 'n type(char) hilite(reverse) color(White)'
+queue 'o type(char) intens(non)'
+queue 'p type(char) hilite(reverse) color(Blue)'
+queue 'q type(char) hilite(reverse) color(Red)'
+queue 'r type(char) hilite(reverse) color(Pink)'
+queue 's type(char) hilite(reverse) color(Green)'
+queue 't type(char) hilite(reverse) color(Turquoise)'
+queue 'u type(char) hilite(reverse) color(Yellow)'
+queue 'v type(char) hilite(reverse) color(White)'
+queue 'w type(char) intens(non)'
+queue 'x type(char) hilite(reverse) color(Blue)'
+queue 'y type(char) hilite(reverse) color(Red)'
+queue 'z type(char) hilite(reverse) color(Pink)'
+queue ')BODY width(&zscreenw) expand(//)'
+queue '+                    Mandelbrot Set'
+/*
+queue '+                    Mandelbrot Set X:_minRE_maxRE +Y:_minIM_maxIM+'
+*/
+queue '$D,shadow' || copies(' ',zscreenw-10) || '$' /* Dynvar isn't defined! */
+queue ')PROC'
+queue ' &pfkey = .PFKEY'
+queue ')END'
+address ISPEXEC
+'LMINIT DATAID(DAID) DDNAME(PANELS)'
+'LMOPEN DATAID('daid') OPTION(OUTPUT)'
+do QUEUED()
+   parse PULL pline
+   'LMPUT DATAID('daid') MODE(INVAR)' ,
+                 'DATALOC(PLINE) DATALEN('zscreenw')'
+end
+'LMMADD  DATAID('daid') MEMBER('panel')'
+'LMCLOSE DATAID('daid')'
+'LMFREE  DATAID('daid')'
+'LIBDEF ISPPLIB DATASET ID('panel_lib') STACK'
+return
+
+housekeeping:
+arg remove
+if remove <> '' then
+ address ISPEXEC "LIBDEF ISPPLIB"
+address TSO
+x = MSG('OFF')
+'FREE DD(PANELS)'
+"DEL" panel_lib
+x = MSG('ON')
+return
+
+allocate_panel:
+address TSO
+'ALLOC DD(PANELS) DA('panel_lib')' ,
+         'NEW UNIT(SYSALLDA) SPACE(1 1) TRACKS' ,
+         'DIR(1) RECFM(F B) LRECL('zscreenw') BLKSIZE(0)'
+return
+novalue:
+say 'No Value error encountered.'
+exit

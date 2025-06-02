@@ -1,0 +1,95 @@
+/* A Rexx which displays a RACF user online along with all permissions */
+signal on novalue
+user = userid()
+address TSO
+"alloc dd(infile) da('MVSGRP.IRRDBU00') shr"
+"execio * diskR infile (stem in. finis)"
+"free fi(infile)"
+address ISPEXEC
+"tbcreate racfdisp names(id group class profile access) nowrite replace"
+call mainline
+do forever
+ 'tbsort  racfdisp fields(group,ch,a,class,ch,a,profile,ch,a)'
+ 'tbdispl racfdisp panel(racfdisp)'
+ if rc < 5 then
+  call mainline
+ else
+  leave
+end
+exit
+
+mainline:
+"tbcreate racfdisp names(id group class profile access) nowrite replace"
+thisUser. = ''
+do i = 1 to in.0
+ rectype = left(in.i,4)
+ if substr(in.i,6,8) = user then
+  do
+   if rectype = '0203' then /* Group connections */
+     thisUser.groupList = thisUser.groupList substr(in.i,15,8)
+  end
+ end
+do i = 1 to in.0
+ rectype = left(in.i,4)
+ if rectype = '0404' then /* Data set access record  */
+  if substr(in.i,58,8) = user then
+   do
+    id = rectype
+    group = '!'user
+    class = 'DATASET'
+    profile = substr(in.i,6,44)
+    access = substr(in.i,67,8)
+    'tbadd racfdisp'
+   end
+  else
+   do j = 1 to words(thisUser.groupList)
+    thisGroup = word(thisUser.groupList,j)
+    if substr(in.i,58,8) = thisGroup then
+     do
+      id = rectype
+      group = thisGroup
+      class = 'DATASET'
+      profile = substr(in.i,6,44)
+      access = substr(in.i,67,8)
+      'tbadd racfdisp'
+     end
+   end
+ if rectype = '0505' then /* General resource access record */
+  if substr(in.i,262,8) = user then
+   do
+    id = rectype
+    group = '!'user
+    class = substr(in.i,253,8)
+    profile = strip(substr(in.i,6,245))
+    if length(profile) > 57 then
+     profile = '...'right(profile,55)
+    access = substr(in.i,271,8)
+    'tbadd racfdisp'
+   end
+  else
+   do j = 1 to words(thisUser.groupList)
+    thisGroup = word(thisUser.groupList,j)
+    if substr(in.i,262,8) = thisGroup then
+     do
+      id = rectype
+      group = thisGroup
+      class = substr(in.i,253,8)
+      profile = strip(substr(in.i,6,245))
+      if length(profile) > 57 then
+       profile = '...'right(profile,55)
+      access = substr(in.i,271,8)
+      'tbadd racfdisp'
+     end
+   end
+end
+return
+/* if rectype = '0200' then /* Userid */
+    say in.i   */
+/* if rectype = '0260' then /* WORKATTR */
+    say in.i  */
+/*    say 'U' left(user,8)      substr(in.j,6,44) /* Data set profile */ ,
+          substr(in.j,67,8) /* Access */  */
+ /* if substr(in.j,6,8) = thisGroup then
+      say 'G' left(thisGroup,8) substr(in.j,58,70) /* Group 'description' */ */
+/*    say 'G' left(thisGroup,8) substr(in.j,6,44) /* Data set profile */ ,
+          substr(in.j,67,8) /* Access */    */

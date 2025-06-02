@@ -1,0 +1,23 @@
+)ATTR
+   $ area(dynamic) scroll(on) extend(on)
+ % type(output)  color(yellow)
+01 type(dataout) color(white)
+02 type(dataout) color(yellow)
+03 type(dataout) color(turquoise)
+04 type(dataout) color(green)
+05 type(dataout) color(red)
+11 type(text)    color(white)
+12 type(text)    color(yellow)
+13 type(text)    color(turquoise)
+14 type(text)    color(green)
+15 type(text)    color(red)
+
+)BODY
++Jobname%jobname   %line#+of%linesStepnameRetainedCataloged/KeptNew
+Deleted
++Command ===>_zcmd
+$dynvar                                                                        $
+)INIT
+)PROC
+ &pfkey = .PFKEY
+)END

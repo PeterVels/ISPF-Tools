@@ -1,0 +1,18 @@
+)ATTR DEFAULT(%+_)
+ @ TYPE(TEXT) INTENS(LOW) COLOR(PINK) CAPS(OFF)
+ # TYPE(OUTPUT) INTENS(LOW) COLOR(WHITE) SKIP(ON)
+)BODY EXPAND(||)
+%&LPAR &ZDATESTD &ZTIME --- List of PARMLIB members --- &DT
+%COMMAND ===>_ZCMD                                           %SCROLL ===>_Z   %
+@ S Parmlib data set and member                  Time read
+@ - -------------------------------------------- -------------
+)MODEL
+ _Z#Z                                           #Z              %
+)INIT
+.CURSOR = zcmd
+.ZVARS='(ZSCROLLA selectn dsn tm)'
+.attr(selectn) = 'caps(on)'
+&ZTDMARK = ' *** Bottom of data ***'
+)PROC
+ VER(&zcmd,list,&z)
+)END

@@ -1,0 +1,27 @@
+/* Rexx edit macro to insert a comment after each link to ISPLINK
+   in an assembler program so that when debugging it's easier
+   to see where you are */
+address ISREDIT
+"macro () NOPROCESS"
+"up m"
+"x all"
+"f all '*PETE' 1"
+"del all nx"
+do forever
+  "f 'EP=ISP'"
+  if rc <> 0 then leave
+  "(l c) = cursor"
+  "(linedata) = line" l
+  parse var linedata 'PARAM=(' rest .
+  if left(linedata,1) <> '*' then
+   do
+    do while substr(linedata,72,1) <> ' '
+      l = l + 1
+      "(linedata) = line" l
+    end
+    comment = '*Pete' rest
+    "line_after" l "= (comment)"
+   end
+end
+"l 0"
+exit

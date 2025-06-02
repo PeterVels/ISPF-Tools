@@ -1,0 +1,16 @@
+)ATTR
+  + type(text)    skip(on) color(yellow)
+  \ type(text)    skip(on) color(blue)
+  $ type(output)  color (yellow)
+  ! type(output)  color (turquoise)
+  # type(output)  color (white)
+)BODY
+                     +Mounts in#dsnmem
++Command ===>_ZCMD                                              +Scroll ==>_SCRL
++
+)MODEL
+#z$mp                                 !fs
+)INIT
+ .ZVARS = '(RorM)'
+)PROC
+)END

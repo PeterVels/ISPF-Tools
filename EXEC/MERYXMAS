@@ -1,0 +1,24 @@
+/* Rexx to display a panel with adjacent fields with different attributes */
+"alloc fi(infile) da('USER01.USER.CARDS(MERYXMAS)') shr"
+"execio * diskR infile (stem in. finis)"
+"free fi(infile)"
+dynvar = ''
+do i = 1 to in.0
+ dynvar = dynvar || left(in.i,80)
+end
+shadow = ''
+do i = 1 to in.0
+ shadow = shadow || ' ' || substr(in.i,2,79)
+end
+address ISPEXEC 'display panel(meryxmas)'
+exit
+/*
+These chars MODIFY the attributes of the underlying text (shadow)
+
+$ TYPE(CHAR) HILITE(REVERSE) COLOR(YELLOW)
+> TYPE(CHAR) COLOR(RED)
+# TYPE(CHAR) COLOR(BLUE) HILITE(USCORE)
+
+This is the text you see (modified by the above CHARs)  (dynvar)
+Á TYPE(DATAOUT) INTENS(LOW) COLOR(white)
+*/

@@ -1,0 +1,23 @@
+)ATTR
+  _ type(input)   color(green) hilite(uscore)
+  + type(text)    skip(on) color(yellow)
+  \ type(text)    skip(on) color(blue)
+  $ type(output)  color (yellow)
+  ! type(output)  color (turquoise)
+  # type(output)  color (white)
+)BODY
+                 +Port Scanner#elapsed
++Command ===>_ZCMD                                              +Scroll ==>_SCRL
+#msg
++Enter target Hostname or IP address below:
+_pstarget                                                                      +
++Ports:\(e.g. 21-22 80 443 8801-8805)+Show error lines?_z\(Y/N)
+_psports                                                                       +
+)MODEL
+#port  !rv  $result
+)INIT
+ .zvars = '(psErrors)'
+ .cursor = pstarget
+)PROC
+ ver(&pstarget,NB)
+)END

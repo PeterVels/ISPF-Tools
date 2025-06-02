@@ -1,0 +1,29 @@
+/* Rexx to update ISPF member statistics */
+arg abc
+address ISPEXEC
+if abc <> '' then
+ do
+  posquot = pos("'",abc)
+  if posquot > 0 then
+    abc = substr(abc,2,length(abc)-2)
+  posbrkt = pos('(',abc)
+  if posbrkt > 0 then
+  do
+   dsn = substr(abc,1,posbrkt-1)
+   mem = substr(abc,posbrkt+1,pos(')',abc)-posbrkt-1)
+  end
+ end
+now = left(time(),5)
+today = date('O')
+if mem <> 'MEM' then
+ do
+  "LMINIT DATAID(inp) DATASET('"dsn"') ENQ(SHRW)"
+  "LMOPEN DATAID("inp") OPTION(INPUT)"
+  "LMMFIND DATAID("inp") member("mem") stats(yes)"
+  if rc = 0 then
+    "lmmstats dataid("inp") member("mem") user("userid()")",
+      "created("today") moddate("today") modtime("now")"
+  "LMCLOSE DATAID("inp")"
+  "LMFREE  DATAID("inp")"
+ end
+exit

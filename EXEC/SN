@@ -1,0 +1,13 @@
+/* Rexx edit macro to show the NEXT line after finding a string in column 2 */
+address ISREDIT
+"macro (findme) NOPROCESS"
+if findme = '' then findme = 'DSN'
+"x all"
+"l 0"
+do forever
+ "find '"findme"' 2"
+ if rc <> 0 then leave
+ "(l c) = cursor"
+ "l" l+1
+end
+exit 1

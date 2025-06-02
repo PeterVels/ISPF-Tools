@@ -1,0 +1,9 @@
+/* REXX to sleep for a few seconds */
+arg seconds
+if seconds = '' then seconds = 2
+call syscalls 'ON'
+/* address TSO "se 'It is" time() "'" */
+say 'Sleeping' seconds 'seconds'
+address syscall "SLEEP" seconds
+call syscalls 'OFF'
+exit 0

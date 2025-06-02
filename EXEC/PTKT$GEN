@@ -1,0 +1,16 @@
+/* REXX script to generate a RACF passticket */
+trace r
+ADDRESS TSO
+
+/* Variables to customize */
+userid = userid()
+application = 'TSOS0W1'
+
+/* Load IRRSPK00 */
+CALL BPXWDYN "ALLOC DD(SYSOUT) DA(*) RECFM(F,B) LRECL(80) SYSOUT(*)"
+ADDRESS LINKMVS "IRRSPK00" "USER("userid") APPLDATA("application") USESESSION"
+
+IF RC = 0 THEN
+  SAY "Passticket generated successfully!"
+ELSE
+  SAY "Error generating passticket. Return code:" RC

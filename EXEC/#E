@@ -1,0 +1,95 @@
+/* rexx edit macro to EDIT the data sets under the cursor */
+/* Writing from scratch on 25th March 2021 as an anti-Alzheimer's exercise */
+signal on novalue
+address ISREDIT
+"macro (parm) NOPROCESS"
+"(l c) = cursor"
+"(linedata) = line" l
+/* test line PETER.ACS.LISTING  */
+rest = ''
+quote = '"'
+apost = "'"
+delimiters = quote || apost || '(), '
+haveDSN = 0
+select
+ when pos('DSN=',linedata) > 0 then
+   parse var linedata . 'DSN=' rest
+ when pos('DSNAME=',linedata) > 0 then
+   parse var linedata . 'DSNAME=' rest
+ when pos('ORDER=(',linedata) > 0 then
+   parse var linedata . 'ORDER=(' rest ')'
+ when pos('ORDER=',linedata) > 0 then
+  do
+   parse var linedata . 'ORDER=' dsn .
+   haveDSN = 1
+  end
+ otherwise
+   do
+    firstdot = pos('.',linedata)
+    if firstdot > 0 then
+     do i = firstdot to 1 by -1
+      if pos(substr(linedata,i,1),delimiters) > 0 then
+       do
+        startpos = i + 1
+        leave i
+       end
+     end
+    else
+     do
+      say 'No data set name on that line?' strip(linedata)
+      exit 4
+     end
+    lastdot = lastpos('.',linedata)
+    if lastdot > 0 then
+     do i = lastdot to length(linedata)
+      if pos(substr(linedata,i,1),delimiters) > 0 then
+       do
+        endpos = i
+        leave i
+       end
+     end
+    else
+     do
+      say 'No data set name on that line?' strip(linedata)
+      exit 4
+     end
+   dsn = substr(linedata,startpos,endpos-startpos)
+   haveDSN = 1
+   end
+end
+if \haveDSN then
+ do
+  if rest = '' then exit
+  rest = strip(rest)
+  rest = strip(rest,"B","'")
+  checkme = "'"rest"'"
+  if SYSDSN(checkme) = 'OK' then
+   dsn = checkme
+  else
+   do
+    dsn = ''
+    do i = 1 to length(rest)
+     if pos(substr(rest,i,1),delimiters) > 0 then
+      if lastpos('(',rest) < lastpos(')',rest) then
+        dsn = "'"left(rest,lastpos(')',rest))"'"
+      else
+        dsn = left(rest,i - 1)
+     if dsn <> '' then leave
+    end
+   end
+ end
+select
+ when translate(left(parm,1)) = 'B' then
+  verb = 'browse'
+ when translate(left(parm,1)) = 'V' then
+  verb = 'view'
+ otherwise
+  verb = 'edit'
+end
+if dsn <> '' then
+ do
+  address ISPEXEC
+  'control errors return'
+  verb "dataset("dsn")"
+ end
+exit

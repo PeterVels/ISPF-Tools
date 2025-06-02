@@ -1,0 +1,28 @@
+/* rexx edit macro to determine the length of a string in apostrophes */
+signal on novalue
+address ISREDIT
+'macro () NOPROCESS'
+'(l c) = cursor'
+'(linedata) = line' l
+startpos = pos("'",linedata)
+if startpos = 0 then
+ do
+  say 'There is no apostrophe on line' l
+  exit 4
+ end
+endpos = lastpos("'",linedata)
+if endpos = startpos then
+ do
+  say 'There is only 1 apostrophe on line' l
+  exit 4
+ end
+num = endpos - startpos - 1
+numpos = pos('#',linedata)
+Rparen = pos(')',linedata)
+if numpos > 0 then do
+ newline = left(linedata,numpos-1) || num || substr(linedata,Rparen)
+ 'line' l '= (newline)'
+ end
+else
+ 'line_after' l '= noteline (num)'
+exit

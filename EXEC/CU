@@ -1,0 +1,92 @@
+/* Rexx to display and modify ISPF member statistics (embedded panel) */
+arg abc
+panel = 'cu'
+panel_lib  = 'TEMP.PANEL.D' || random(100000)
+call housekeeping
+call allocate_panel
+call populate_panel
+address ISPEXEC
+if abc <> '' then
+ do
+  posquot = pos("'",abc)
+  if posquot > 0 then
+    abc = substr(abc,2,length(abc)-2)
+  posbrkt = pos('(',abc)
+  if posbrkt > 0 then
+  do
+   dsn = substr(abc,1,posbrkt-1)
+   mem = substr(abc,posbrkt+1,pos(')',abc)-posbrkt-1)
+  end
+ end
+if mem <> 'MEM' then
+ do
+  "LMINIT DATAID(inp) DATASET('"dsn"') ENQ(SHRW)"
+  "LMOPEN DATAID("inp") OPTION(INPUT)"
+  "LMMFIND DATAID("inp") member("mem") stats(yes)"
+  "display panel(cu)"
+  if rc = 0 then
+    "lmmstats dataid("inp") member("mem") user("zluser")",
+      "created("zlcdate") moddate("zlmdate") modtime("zlmtime")",
+      "modlevel("zlmod") version("zlvers")"
+  "LMFREE DATAID("inp")"
+  "CONTROL DISPLAY REFRESH"
+ end
+call housekeeping
+exit
+
+populate_panel:
+queue ")ATTR                                                       "
+queue "  ø type(text)  intens(low)  color(yellow)                  "
+queue "  ! type(text)  intens(low)  color(blue)                    "
+queue "  _ type(input) intens(low)  hilite(uscore)                 "
+queue "  | type(input) caps(off) intens(low) hilite(uscore)        "
+queue ")BODY WIDTH(&ZSCREENW) EXPAND(\\)                           "
+queue "!\-\Modify member statistics\-\                             "
+queue "%COMMAND ===>_zcmd                                          "
+queue "%                                                           "
+queue "ø Dataset...: _dsn                                         +"
+queue "ø Member....: _mem     +                                    "
+queue "ø Userid....: _zluser  +                                    "
+queue "ø Created...: _zlcdate +                                    "
+queue "ø Mod Date..: _zlmdate +                                    "
+queue "ø Mod Time..: _zlmtime +                                    "
+queue "ø Mod Level.: _zlmod   +                                    "
+queue "ø Version...: _zlvers  +                                    "
+queue "ø Init Size.: _zlsize  +                                    "
+queue "%                                                           "
+queue "%                                                           "
+queue "%!\-\                                                       "
+queue ")Init                                                       "
+queue "  .cursor = 'zluser'                                        "
+queue ")PROC                                                       "
+queue ")END                                                        "
+queue ''
+address ISPEXEC
+'LMINIT DATAID(DAID) DDNAME(tmppanel)'
+'LMOPEN DATAID(' || daid || ') OPTION(OUTPUT)'
+do QUEUED()
+   parse PULL pline
+   'LMPUT DATAID(' || daid || ') MODE(INVAR)' ,
+                 'DATALOC(PLINE) DATALEN(80)'
+end
+'LMMADD  DATAID(' || daid || ') MEMBER(' || panel || ')'
+'LMCLOSE DATAID(' || daid || ')'
+'LMFREE  DATAID(' || daid || ')'
+"LIBDEF ISPPLIB DATASET ID(" || panel_lib || ") STACK"
+return
+
+housekeeping:
+"ISPEXEC LIBDEF ISPPLIB"
+address TSO
+x = MSG('OFF')
+'FREE DD(tmppanel)'
+"DEL" panel_lib
+x = MSG('ON')
+return
+
+allocate_panel:
+address TSO
+"ALLOC DD(tmppanel) DA(" || panel_lib || ")" ,
+         "NEW UNIT(SYSALLDA) SPACE(1 1) TRACKS" ,
+         "DIR(1) RECFM(F B) LRECL(80) BLKSIZE(0)"
+return

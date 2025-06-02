@@ -1,0 +1,45 @@
+/* Rexx to search a list of data sets in batch  - one data set per step */
+address ISPEXEC
+'vget (dsnmask searchme) profile'
+do forever
+ 'display panel(pvsearch'
+ if rc <> 0 then leave
+ call mainline
+end
+'vput (dsnmask searchme) profile'
+exit
+
+mainline:
+if pos("'",searchme) = 0 then searchme = "'"searchme"'"
+dsn = ''
+dsnnum = 0
+'tbcreate pvsearch names(dsnnum dsn) nowrite replace'
+"lmdinit listid(dsnid) level("dsnmask")"
+do while RC = 0
+ "lmdlist listid("dsnid") group(matching) option(LIST) dataset(dsn)"
+ if RC = 0 then
+  do
+    dsnnum = dsnnum + 1
+   'tbadd pvsearch'
+  end
+end
+'tbquery pvsearch rownum(numrows)'
+select
+ when numrows > 255 then
+   msg = 'Version 1.0 supports a maximum of 255 data sets'
+ when numrows > 0 then
+  do
+   uid = userid()
+   "lmdfree listid("dsnid")"
+   "ftopen temp"
+   "ftincl pvsearch EXT"
+   "ftclose"
+   "vget (ztempn) shared"
+   "LMINIT datAID(tempID) DDNAME("ztempn")"
+   "edit dataID("tempID")"
+   "LMFREE dataID("tempID")"
+  end
+ otherwise
+  msg = 'No data sets matched the mask' dsnmask
+end
+return

@@ -1,0 +1,27 @@
+/* Rexx edit macro to swap DSN=bla,DISP=SHR to DISP=SHR,DSN=bla */
+address ISREDIT
+"macro () NOPROCESS"
+"(zlast) = linenum .zlast"
+do i = 1 to zlast
+ "(linedata) = line" i
+ posdisp = pos('DISP=SHR',linedata)
+ posdsn  = pos('DSN=',linedata)
+ if posdisp > 0 & posdsn > 0 & posdisp > posdsn & substr(linedata,3,1) <> '*',
+  then
+  do
+   parse var linedata front'DSN='dsn','b1'DISP=SHR'b2
+   front = front'DISP=SHR,DSN='dsn
+   select
+    when b1 = '' & b2 = '' then
+     newline = front
+    when b1 <> '' & b2 = '' then
+     newline = front','left(b1,length(b1)-1)
+    when b1 = '' & b2 <> '' then
+     newline = front || b2
+    otherwise
+     newline = front','b1','b2
+   end
+   "line" i "= (newline)"
+  end
+end
+exit

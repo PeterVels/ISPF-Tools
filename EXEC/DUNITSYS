@@ -1,0 +1,71 @@
+/* REXX to answer an IBM-MAIN question:
+
+   Coding an assembler program, whose overall logic is to accept input
+   of from 1 to several hundred 8-character values, before being saved
+   by the user. Each row would contain around 8 such input fields. The
+   values in each field have to be validated by the program logic. If
+   an invalid value is entered, the program must set the cursor on the
+   first field with an invalid value and redisplay the panel.
+
+   Is it better to use ISPF's table or dynamic area services for such
+   a program? TIA!
+   ...
+   I think I can answer my own question. I should go with tables,
+   because the fields have fixed attributes and lengths and the fields
+   do not need to be defined at execution time. Is that about right?
+
+   support@dunnitsys.com  (possibly Jerry)
+*/
+address ISPEXEC
+'vget (zscreend)'
+'tbcreate dunitsys names(i1 i2 i3 i4 i5 i6 i7 i8) nowrite replace'
+parse value ' ' with i1 i2 i3 i4 i5 i6 i7 i8
+do zscreend - 4
+ 'tbadd dunitsys'
+end
+cursorField = 'i1'
+SlctdRow = 0
+do forever
+ 'tbtop   dunitsys'
+ 'tbdispl dunitsys panel(dunitsys)'
+/* 'tbdispl dunitsys panel(dunitsys) cursor('cursorField') CSRROW('SlctdRow')'*/
+ if rc <> 0 & rc <> 4 then
+  leave
+ msg = ''
+/* Populate ISPF table with user entries... */
+ do while ztdsels > 0
+  'TBPUT dunitsys'  /* write whatever the user entered to the table */
+  'control display lock'
+  'tbdispl dunitsys' /* reposition CRP at the next selected row (if any) */
+ end
+end
+exit
+/*----this WAS in the loop, but now the panel VER statement does all the work
+ 'TBTOP  dunitsys'
+ 'TBQUERY dunitsys rownum(numrows)'
+ do i = 1 to numrows
+  'TBSKIP dunitsys'
+  if msg = '' then
+   do
+     /* process the 8 variables for the selected row */
+     thisRow = i1 i2 i3 i4 i5 i6 i7 i8
+     if thisRow <> '' then
+      do f = 1 to 8
+       interpret "field = 'i"f"'"
+       fieldval = value(field)
+       if fieldval <> '' & datatype(fieldval) <> 'NUM' then
+        do
+         cursorField = field
+         SlctdRow = i
+         msg = 'Field' f 'on row' i 'is not numeric'
+         leave f
+        end
+      end
+   end
+ end
+ if msg = '' then
+  do
+   SlctdRow = 0
+   cursorField = 'i1'
+  end
+  -------------*/

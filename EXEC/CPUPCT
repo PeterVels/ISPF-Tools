@@ -1,0 +1,226 @@
+/*%NOCOMMENT====================* REXX *===============================*/
+/*     TYPE:  TSO Command                                             */
+/*  PURPOSE:  Display CPU Percentage Utilization                      */
+/*    OWNER:  Operating Systems Services (G-ZOS-Engineering)          */
+/*--------------------------------------------------------------------*/
+/* FLG  YYMMDD  USERID   DESCRIPTION                                  */
+/* ---  ------  -------  -------------------------------------------- */
+/* @A2  210219  S915460  Updated code, make easier to maintain        */
+/* @A1  210218  S915460  Modified displays/code, get to work at WF    */
+/* @A0  210218  S915460  Obtained REXX/panel from CBT1001 (PVCPUPCT)  */
+/*======================================================================*/
+arg batch
+/* signal on novalue */
+panel     = 'CPUPCT'             /* Display  panel          */
+help      = '#CPUPCT'            /* Tutorial panel          */
+bar1      = '-'                  /* Divider (under headers) */
+bar2      = '*'                  /* Job's utilization       */
+bar3      = ' '                  /* CPU's utilization       */
+bar4      = '*'                  /* Job's utilization (end) */
+bar5      = '*'                  /* CPU's utilization (end) */
+c2        = ''                   /* Contains ISFSYSNAME     */
+
+red       = '01'x                /* Color definitions       */
+yellow    = '02'x
+white     = '03'x
+green     = '04'x
+turq      = '05'x
+blue      = '08'x
+pink      = '09'x
+red_hi    = '11'x
+yellow_hi = '12'x
+white_hi  = '13'x
+green_hi  = '14'x
+lb        = 'AD'x
+rb        = 'BD'x
+
+address ISPEXEC
+  if (batch = '') then do
+     'vget (zscreenw zsysid)'
+     sw = zscreenw
+  end
+  else
+     sw = 80
+
+  msg = ''
+  do forever
+     dynvar = ''
+     call mainline
+     if (batch <> '') then leave
+     'display panel('panel')'
+     msg = ''
+     if (rc <> 0) then leave
+     C2 = translate(strip(zcmd))
+  end
+EXIT
+/*--------------------------------------------------------------------*/
+/*  Main routine to call subroutines to invoke SDSF                   */
+/*--------------------------------------------------------------------*/
+MAINLINE:
+  rc = isfcalls('ON')
+  call part1
+  call part2
+  rc = isfcalls('OFF')
+RETURN
+/*--------------------------------------------------------------------*/
+/*  Invoke SDSF to obtain CPU percentage                              */
+/*--------------------------------------------------------------------*/
+PART1:
+  isfsysname = '*'
+  isfprefix  = "JES2" /* Pick something that's running everywhere */
+  isffilter  = ""
+  isfcols    = 'JNAME SCPU SYSNAME SLCPU REAL SZIIP ZIIPUSE'
+  isfsort    = 'SYSNAME A'
+  address sdsf "isfexec da" /* (alternate delayed)" */
+  if (RC <> 0) then do
+     call msgrtn
+     return
+  end
+  if (isfrows = 0) then
+     msg = 'No matching rows?   Something went wrong'
+  else do
+     dynvar = dynvar || turq || left('LPAR   Utilization',sw - 1)
+     dynvar = dynvar || turq || copies('-', sw - 1)
+     DO ix = 1 TO ISFROWS
+        select
+            when (scpu.ix > 98) then do
+                 barcolour    = red
+                 bc_highlight = red_hi
+            end
+            when (scpu.ix > 90) then do
+                 barcolour    = yellow
+                 bc_highlight = yellow_hi
+            end
+            when (scpu.ix > 50) then do
+                 barcolour    = white
+                 bc_highlight = white_hi
+            end
+            otherwise do
+                 barcolour    = green
+                 bc_highlight = green_hi
+            end
+        end
+        baradjust = 3 - (sw % 80)
+        barchart  = copies(bar3,scpu.ix % baradjust) || bar3
+        dynvar    = dynvar || barcolour || ,
+                    left(  sysname.ix' '|| ,
+                           bc_highlight || ,
+                           barchart     || ,
+                           barcolour    || ,
+                           scpu.ix      || turq,
+                    ,sw - 1)
+     end
+     ix = ix - 1
+   end
+RETURN
+/*--------------------------------------------------------------------*/
+/*  Invoke SDSF to obtain Job's CPU utilization                       */
+/*--------------------------------------------------------------------*/
+PART2:
+  isffilter = "CPUPR GT 0"
+  select
+     when (c2 <> '') then
+          isfsysname = C2
+     otherwise do
+          isfsysname = '*'
+          isffilter = "CPUPR GE 3"
+     end
+  end
+  isfprefix = "**"
+  isfcols   = 'JNAME CPUPR OWNERID JOBID SYSNAME real ziipuse'
+  isfsort   = 'SYSNAME A CPUPR D'
+  address sdsf "isfexec da" /* (alternate delayed)" */
+  if (RC <> 0) then do
+     call msgrtn
+     return
+  end
+  if (isfrows = 0) then
+     msg = 'No jobs are using CPU.'
+  else do
+     dynvar    = dynvar || turq || copies(' ',sw - 1)
+     dynvar    = dynvar || turq ||,
+                 left('LPAR   Jobname   Owner    CPU%',
+                      '  Utilization',sw - 1)
+     divider   = turq || ,
+                 copies(bar1,sw - 1)
+     prev_lpar = ''
+     DO ix = 1 TO ISFROWS
+        barf     = cpupr.ix
+        barchart = copies(bar2,barf % baradjust) || bar4 || turq
+        select
+           when (barf > 50) then
+                barcolour = red
+           when (barf > 25) then
+                barcolour = yellow
+           when (barf > 10) then
+                barcolour = white
+           otherwise
+                barcolour = green
+        end
+        owner = ownerid.ix
+        select
+           when (sysname.ix <> '') then
+                lpar = white       || left(sysname.ix,5) || white
+           otherwise
+                lpar = red         || left(sysname.ix,5) || white
+        end
+        if (lpar <> prev_lpar) then
+           dynvar = dynvar || divider
+        prev_lpar = lpar
+        if (jname.ix = 'SDSFAUX') then
+           jname_colour = '02'x
+        else
+           if (strip(owner) = '') then
+              jname_colour = blue
+           else
+              jname_colour = yellow
+        if (owner = '') then
+           owner = 'N/A'
+        cpubar =             lpar    || ,
+                 jname_colour      || left(jname.ix,8) ,
+                            red    || left(owner,7) ,
+                            turq   || right('    'barf,5) ,
+                         barcolour || barchart
+        if (ziipuse.ix > 0) then do
+           zipbar = green || bar5 || copies(bar2,ziipuse.ix % 10)
+           ziplit = red || 'zIIP%' || Turq
+        end
+        else do
+           zipbar     = ''
+           ziplit     = ''
+           ziipuse.ix = ''
+        end
+        lcpubar = length(cpubar)
+        lzipbar = length(zipbar)
+        #spaces = sw - lcpubar - lzipbar - length(ziplit),
+                  - 2 - length(ziipuse.ix)
+        if (#spaces < 1) then #spaces = 1
+        dynvar = dynvar || cpubar || copies(' ',#spaces) ||,
+                      ziplit ziipuse.ix zipbar
+     end
+  end
+RETURN
+/*--------------------------------------------------------------------*/
+/*   IF SDSF RC > 0, then display messages                            */
+/*--------------------------------------------------------------------*/
+MSGRTN: PROCEDURE EXPOSE ISFMSG ISFMSG2.
+  if (isfmsg <> "") then
+     say "ISFMSG is:" isfmsg
+
+  do m=1 to isfmsg2.0
+    say "ISFMSG2."m "is:" isfmsg2.m
+  end
+RETURN
+/*--------------------------------------------------------------------*/
+/*   If variable has no value, display message                        */
+/*--------------------------------------------------------------------*/
+NOVALUE:
+  signal off novalue
+  trace n
+  do while queued() <> 0
+     parse pull
+  end
+  say 'CPUPCT failed on source line' sigl
+  say "Uninitialised variable" condition('D')
+  say sourceline(sigl)
+EXIT 20

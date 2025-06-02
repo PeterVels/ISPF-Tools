@@ -1,0 +1,28 @@
+)attr
+)body
++Test for Lionel B Dyck
++
++  Is there a way to determine if F3 (END) was entered while in the )PROC panel
++  rexx routine.
++
++  When I try zcmd is always null ???
++
++  Thanks
++
++  Lionel B. Dyck
++
++  Wouldn't it be in ZVERB?
++
++  Binyamin Dissen
+)init
+)proc
+if (.resp = end)
+ &response = END
+else
+ &response = Not_END
+*REXX(response,zcmd,zverb)
+say 'Response:' response
+say 'ZCMD    :' zcmd
+say 'ZVERB   :' zverb
+*ENDREXX
+)end

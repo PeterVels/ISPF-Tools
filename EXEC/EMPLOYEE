@@ -1,0 +1,5 @@
+/* REXX to fire up the Db2 demo App */
+/* Run in PCOM, otherwise GDDM doesn't work */
+address TSO
+"alloc fi(sysprint) da(*) reuse"
+"call 'DSNC10.DBCG.RUNLIB.LOAD(DSN8SCM)'"

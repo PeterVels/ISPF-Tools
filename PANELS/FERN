@@ -1,0 +1,14 @@
+)ATTR
+} AREA(DYNAMIC) EXTEND(ON)
+! TYPE(CHAR)                 COLOR(RED)
+@ TYPE(CHAR)                 COLOR(PINK)
+# TYPE(CHAR)                 COLOR(WHITE)
+$ TYPE(CHAR)                 COLOR(YELLOW)
+% TYPE(CHAR)                 COLOR(GREEN)
+^ TYPE(CHAR)                 COLOR(TURQUOISE)
+{ TYPE(CHAR)                 COLOR(BLUE)
+)body WIDTH(&width) EXPAND(//)
+}dynvar,shadow / /}
+)init
+)proc
+)END

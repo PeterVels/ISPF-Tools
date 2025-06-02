@@ -1,0 +1,23 @@
+/* Rexx edit macro to display mounts that happened during IPL */
+/* Instructions:
+ 1. Save the syslog containing the BPXF013I messages
+ 2. Run this macro while viewing the saved output
+*/
+signal on novalue
+address ISREDIT
+"macro () NOPROCESS"
+"(zlast) = linenum .zlast"
+address ISPEXEC "tbcreate iplmount names(ts fs) nowrite replace"
+out. = ' '
+do i = 1 to zlast
+ "(linedata) = line" i
+ if pos('BPXF013I',linedata) > 56 then
+  do
+   parse var linedata . . . . ts 'BPXF013I FILE SYSTEM' fs .
+   address ISPEXEC "tbadd iplmount"
+  end
+end
+address ISPEXEC
+"tbtop iplmount"
+"tbdispl iplmount panel(iplmount)"
+exit

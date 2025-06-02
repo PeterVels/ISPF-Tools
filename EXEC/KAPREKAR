@@ -1,0 +1,39 @@
+Too tired!
+/*
+
+ Take 6174, known as Kaprekar's constant. Start with any four-digit number,
+ arrange its digits in ascending and descending order, and subtract. Repeat
+ this process, and you'll always end up at 6174. It's like a mathematical
+ black hole, pulling all numbers toward it.
+
+*/
+trace r
+x = random(1000,9999)
+/* 4 8 3 5
+   i j
+     i j
+       i j
+*/
+do forever
+ do i = 1 to 3
+  j = i + 1
+  charL = substr(x,i,1)
+  charR = substr(x,j,1)
+  select
+   when i = 1 then
+     x = substr(x,j,1) || left(x,1) || right(x,2)
+   when i = 2 then
+     x = left(x,1) ||
+     lhs = left(x,k)
+     rhs = ''
+    end
+   otherwise
+    do
+     lhs = left(x,k)
+     rhs = ''
+    end
+  end
+ end
+end
+y = reverse(x)
+z = abs(x - y)

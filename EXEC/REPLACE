@@ -1,0 +1,17 @@
+/* Rexx to replace B with C within A */
+n1 = 'Porgazian'
+n2 = 'Vels'
+h1 = 'Is this right?: Peter Porgazian, Philip Porgazian, and Lisa Porgazian'
+h2 = replace(h1,n1,n2)
+say h2
+exit
+
+replace:
+parse arg haystack,needle1,needle2
+l1 = length(needle1)
+p1 = pos(needle1,haystack)
+do while p1 > 0
+ haystack = left(haystack,p1-1) || needle2 || substr(haystack,p1+l1)
+ p1 = pos(needle1,haystack)
+end
+return haystack

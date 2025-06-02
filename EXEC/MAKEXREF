@@ -1,0 +1,57 @@
+/* rexx to create JCL to create SYSADATA for all members in libraries */
+msg = ''
+signal on novalue
+address ISPEXEC
+'vget (srclib1 srclib2 srclib3 srclib4 copylib1 copylib2 copylib3)  profile'
+'vget (copylib4 copylib5 copylib6 copylib7 copylib8 copylib9)  profile'
+do forever
+ 'display panel(makexref)'
+ if rc <> 0 then leave
+ if msg = 'OK' then
+  call mainline
+end
+'vput (srclib1 srclib2 srclib3 srclib4 copylib1 copylib2 copylib3) profile'
+'vput (copylib4 copylib5 copylib6 copylib7 copylib8 copylib9)  profile'
+exit
+
+mainline:
+msg = ''
+ x = outtrap('trappedLine.')
+ address TSO
+ "listds '"srclib1"' MEM"
+ if srclib2 <> '' then
+   "listds '"srclib2"' MEM"
+ if srclib3 <> '' then
+   "listds '"srclib3"' MEM"
+ if srclib4 <> '' then
+   "listds '"srclib4"' MEM"
+ x = outtrap('OFF')
+ address ISPEXEC
+ "tbcreate makexref names(srclib pgmname) nowrite replace"
+ processMemberNames = 0
+ do i = 1 to trappedLine.0
+  parse var trappedLine.i 1 firstEleven 12 .
+  if left(firstEleven,2) <> '  ' & left(firstEleven,2) <> '--' then
+   srclib = strip(trappedLine.i)
+  if firstEleven = '--MEMBERS--' then
+   do
+    processMemberNames = 1
+    i = i + 1
+   end
+  else
+   if processMemberNames = 1 & left(firstEleven,2) <> '  ' then
+    processMemberNames = 0
+  if processMemberNames then
+   do
+    parse var trappedLine.i pgmname .
+    "tbadd makexref"
+   end
+ end
+ "ftopen temp"
+ "ftincl makexref"
+ "ftclose"
+ "vget (ztempn) shared"
+ "LMINIT datAID(tempID) DDNAME("ztempn")"
+ "edit dataID("tempID")"
+ "LMFREE dataID("tempID")"
+return

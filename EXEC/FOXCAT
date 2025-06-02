@@ -1,0 +1,19 @@
+/* Rexx to display a panel with adjacent fields with different attributes */
+cattarea = 'ÁThese words contain character attributes: Fox Cat'
+shadow   = '                                           $## > '
+address ISPEXEC 'display panel(foxcat)'
+exit
+/*
+)ATTR
+* AREA(DYNAMIC)
+$ TYPE(CHAR) HILITE(REVERSE) COLOR(YELLOW)
+> TYPE(CHAR) COLOR(RED)
+# TYPE(CHAR) COLOR(BLUE) HILITE(USCORE)
+Á TYPE(DATAOUT) INTENS(LOW) COLOR(pink)
+)BODY
+%-------------------CHARACTER ATTRIBUTE PANEL------------------------
+%COMMAND ===>_ZCMD
++The following will contain character attributes:
+*CATTAREA,SHADOW -----------------------------------------------*
+)END
+*/

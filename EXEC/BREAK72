@@ -1,0 +1,44 @@
+/*---------------------------rexx-------------------------------------*/
+/* Takes an input statement and splits it up so that each             */
+/* line is no longer than 70 positions                                */
+/*--------------------------------------------------------------------*/
+input.  = ''
+output. = ''
+i = 0
+j = 0
+n = 0
+"execio * diskr indd (finis stem input."
+if rc <> 0 then
+   do
+      say 'error opening indd file'
+      exit rc
+   end
+say 'Processing' input.0 'lines...'
+do i = 1 to input.0
+   input.i = strip(input.i)
+   do while length(input.i) > 70
+    call split_line
+   end
+   n = n + 1
+   output.n = input.i
+   output.n = ' 'output.n
+ say left(i,6) '-->' left(n,7)
+end
+"execio * diskw outdd (finis stem output."
+if rc > 1 then
+  say 'error writing outdd file'
+say 'Wrote out' n 'lines.'
+exit rc
+
+split_line:
+do j = 70 to 1 by  -1
+ if substr(input.i,j,1) = ' ' | ,
+    substr(input.i,j,1) = ',' then
+  do
+   n = n + 1
+   output.n = ' 'substr(input.i,1,j-1)
+   input.i  = substr(input.i,j)
+   leave
+  end
+end
+return

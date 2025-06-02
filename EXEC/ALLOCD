@@ -1,0 +1,180 @@
+/* Rexx to read JESYSMSG allocation output and determine file usage */
+/*   Usage: ALLOCD {N} {data set filter}
+                    |   |
+                    |   |
+   See temp DSNS? ---   --- DSN must contain this string to be displayed
+
+   Both parms are optional. Parm order does not matter
+
+   e.g. ALLOCD
+        ALLOCD N
+        ALLOCD SYS
+        ALLOCD N SYS
+        ALLOCD PVELS N
+*/
+signal on novalue
+white     = '01'x  /* jobname  and stepname */
+yellow    = '02'x  /* retained / passed     */
+turquoise = '03'x  /* cataloged / kept      */
+green     = '04'x  /* new                   */
+red       = '05'x  /* deleted               */
+dynvar = ''
+dsfilter = '.'
+true = 1
+false = \true
+Temp = true
+address ISREDIT
+'macro (parms) NOPROCESS'
+parms = translate(parms)
+do i = 1 to words(parms)
+ thisParm = word(parms,i)
+ if thisParm = 'N' then
+  Temp = false
+ else do   /* assume this is some kind of data set filter */
+  dsfilter = thisParm
+ end
+end
+'(zlast) = linenum .zlast'
+do i = 1 to zlast
+ '(linedata) = line' i
+ msg = word(linedata,1)
+ w3  = word(linedata,3)
+ select
+  when msg = 'IEF236I' then
+   do
+    parse var linedata 'IEF236I ALLOC. FOR' jobname stepname .
+    dynvar = dynvar || left( white || copies('-',40),
+            left(jobname,9) || copies('-',10) left(stepname,9), 80)
+   end
+  when msg = 'IGD101I' then
+   do
+    parse var linedata 'IGD101I SMS ALLOCATED TO DDNAME (' ddname ')' .
+    i = i + 1
+    '(linedata) = line' i
+    newdsn = strip(strip(strip(word(linedata,2),'L','('),'T',')'))
+    if checkShow(newdsn) then
+     dynvar = dynvar || left(green'+'left(newdsn,50) ddname, 80)
+   end
+  when msg = 'IGD104I' then
+   do
+    parse var linedata 'IGD104I' retained . 'DDNAME=' ddname .
+    if checkShow(retained) then
+     dynvar = dynvar || left(yellow left(retained,50) ddname, 80)
+   end
+  when msg = 'IGD105I' then
+   do
+    parse var linedata 'IGD105I' deleted . 'DDNAME=' ddname .
+    if checkShow(deleted) then
+      dynvar = dynvar || left(red'-'left(deleted,50) ddname, 80)
+   end
+  when msg = 'IGD106I' then
+   do
+    parse var linedata 'IGD106I' passed . 'DDNAME=' ddname .
+    if checkShow(passed) then
+     dynvar = dynvar || left(yellow left(passed,50) ddname, 80)
+   end
+/*
+  when msg = 'IGD103I' then
+   do
+    parse var linedata 'IGD103I SMS ALLOCATED TO DDNAME ' ddname .
+    newdsn = '(no data set name)'
+    if left(ddname,4) <> 'SYS0' then  /* ignore system data sets */
+     dynvar = dynvar || left(green'+'left(newdsn,50) ddname, 80)
+   end
+*/
+  when msg = 'IEF285I' & (w3 = 'KEPT' | w3 = 'CATALOGED') then
+   do
+    parse var linedata 'IEF285I' kept .
+    kept = strip(kept)
+    if pos(dsfilter,kept) > 0 then
+     do
+      i = i + 1
+      '(linedata) = line' i
+      volser = ''
+      parse var linedata 'IEF285I   VOL SER NOS= ' volser '.' .
+      dynvar = dynvar || left(turquoise left(kept,50) volser, 80)
+     end
+   end
+  otherwise
+   nop
+  end
+  if length(dynvar) > 32000 then /* dynamic variable can't be > 32K */
+   do
+    errmsg = 'Warning: maximum number of lines reached. Not all data shown.'
+    dynvar = left(red || errmsg, 80) || dynvar
+    leave
+   end
+end
+if \temp then do
+  msg = 'Not showing temporary data sets'
+  dynvar = left(white || msg, 80) || dynvar
+ end
+if dsfilter <> '.' then do
+  msg = 'Showing only data set names containing' dsfilter
+  dynvar = left(white || msg, 80) || dynvar
+ end
+dynvar = dynvar || white || copies('-',32) ||' Bottom of Data' || copies('-',32)
+address ISPEXEC
+'vget (zscreend)'
+screen_depth = zscreend - 2
+line# = 1
+lines = length(dynvar) % 80
+save_dynvar = dynvar
+do forever
+ 'display panel(allocd)'
+ if rc <> 0 then
+  leave
+ if pfkey = 'PF07' then
+   line# = line# - screen_depth
+ if pfkey = 'PF08' then
+   line# = line# + screen_depth
+ if line# > lines then
+  line# = lines - screen_depth
+ if line# < 1 then
+  line# = 1
+ offset = (line# - 1) * 80 + 1
+ dynvar = substr(save_dynvar,offset)
+ call process_cursor
+end
+exit
+
+checkShow:
+arg dsn
+if pos('.RA000',dsn) > 0 & \temp then return false
+if pos(dsfilter,dsn) > 0 then return true
+return false
+
+process_cursor:
+'vget (zscreenc)' /* get cursor position */
+cursline = (zscreenc - 80 ) % 80
+if cursline > 1 then
+ do
+  linedata = substr(dynvar,80*(cursline - 1) + 3,60)
+  parse var linedata w1 .
+  dsn = strip(strip(w1,,'+'),,'-')
+  if left(dsn,1) <> '(' then
+   do
+    "control errors return"
+    msg = sysdsn("'"dsn"'")
+    if msg = 'OK' then
+     do
+      if pfkey = 'PF10' then
+       "view dataset('"dsn"')"
+      else
+       "browse dataset('"dsn"')"
+      if RC = 12 then
+       do
+        zedsmsg = 'Empty data set'
+        zedlmsg = dsn 'is an empty data set'
+        "SETMSG MSG(ISRZ001)"
+       end
+     end
+    else
+     do
+      zedsmsg = msg
+      zedlmsg = msg
+      "SETMSG MSG(ISRZ001)"
+     end
+   end
+ end
+return

@@ -1,0 +1,39 @@
+/* Rexx edit macro to display mounts while viewing a BPXPRM* Parmlib member */
+signal on novalue
+address ISREDIT
+"macro () NOPROCESS"
+"(mem) = member"
+"(dsn) = dataset"
+dsnmem = dsn'('mem')'
+"(zlast) = linenum .zlast"
+address ISPEXEC "tbcreate mounts names(RorM fs mp) nowrite replace"
+j = 0
+out. = ' '
+do i = 1 to zlast
+ "(linedata) = line" i
+ if pos('/*',linedata) > 0 then
+   parse var linedata '/*' linedata '*/'
+ if wordpos('ROOT ',linedata) = 1 then
+  do
+   j = j + 1
+   out.j.XRorM = 'ROOT'
+   out.j.Xmp   = '/'
+  end
+ else
+  if wordpos('MOUNT ',linedata) = 1 then
+   j = j + 1
+ if pos('FILESYSTEM',linedata) > 0 then
+   parse var linedata 'FILESYSTEM(' out.j.Xfs ')' .
+ if pos('MOUNTPOINT',linedata) > 0 then
+   parse var linedata 'MOUNTPOINT(' out.j.Xmp ')' .
+end
+address ISPEXEC
+do i = 1 to j
+ RorM = strip(out.i.XRorM,'B',"'")
+ fs   = strip(out.i.Xfs,'B',"'")
+ mp   = strip(out.i.Xmp,'B',"'")
+ "tbadd mounts"
+end
+"tbtop mounts"
+"tbdispl mounts panel(mounts)"
+exit

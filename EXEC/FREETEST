@@ -1,0 +1,30 @@
+/* Rexx */
+trace r
+address TSO
+"alloc fi(commands) new reuse unit(vio)"
+if RC <> 0 then
+ do
+  address ISPEXEC
+  'lminit  dataid(dataID) dd(commands)'
+  'lmopen  dataid('dataID')'
+  'lmclose dataid('dataID')'
+  'lmfree  dataid('dataID')'
+  address TSO
+ end
+queue " 1"
+queue " 2"
+queue " 6"
+queue ""
+"execio * diskW commands (finis)"
+say 'diskW' rc
+"execio * diskR commands (stem in. finis)"
+say 'diskR' rc
+do i = 1 to in.0
+ say in.i
+end
+
+"execio 0 diskW commands (finis)"
+say 'diskW' rc
+"free fi(commands)"
+say 'free' rc
+exit

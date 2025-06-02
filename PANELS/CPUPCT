@@ -1,0 +1,31 @@
+)ATTR DEFAULT(ø+_)
+   $ area(dynamic)  scroll(on)  extend(on)
+   + type(text)                 caps(off) skip(on)
+   @ type(text)     color(pink) caps(off) skip(on)
+   # type(output)               caps(off) skip(on)
+   ! type(output)   color(red)  caps(off) skip(on)
+   \ type(output)   intens(non)
+  01 type(dataout)  color(red)
+  02 type(dataout)  color(yellow)
+  03 type(dataout)  color(white)
+  04 type(dataout)  color(green)
+  05 type(dataout)  color(turquoise)
+  08 type(dataout)  color(blue)
+  09 type(dataout)  color(pink)
+  11 type(dataout)  color(red)    hilite(reverse)
+  12 type(dataout)  color(yellow) hilite(reverse)
+  13 type(dataout)  color(white)  hilite(reverse)
+  14 type(dataout)  color(green)  hilite(reverse)
+)BODY WIDTH(&ZSCREENW) EXPAND(//)
+        #ztimel  #zdayofwk / /+CPU Percentage Utilization/ /
++Command ===>_zcmd                                                        \AMT +
+!msg
+$dynvar/ /$
++
+)INIT
+  .cursor = zcmd
+  &ZTDMARK = ' **End**'
+  .HELP = &HELP
+)PROC
+   &pfkey = .PFKEY
+)END

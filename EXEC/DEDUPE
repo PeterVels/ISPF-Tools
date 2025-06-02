@@ -1,0 +1,15 @@
+/* Rexx to delete duplicate lines */
+address ISREDIT
+'macro () NOPROCESS'
+'sort'
+'(zlast) = linenum .zlast'
+prevline = ''
+do i = 1 to zlast
+ '(linedata) = line' i
+ if linedata = prevline then
+   'XSTATUS' i '= X'
+ prevline = linedata
+end
+info = 'Now issue primary command DEL ALL X'
+'line_before 1 = infoline (info)'
+exit

@@ -1,0 +1,207 @@
+/* Rexx to perform a syntax check on COBOL program */
+/* Thanks to Stephan Kraus for the idea :-)        */
+shhh = msg('OFF')
+"free fi(ceeopts)" /* Having CEEOPTS allocated can ABEND this Rexx! */
+loud = msg('ON')
+tab_char  = '09'x
+first_msgline = 0
+embedded = ''
+address ISREDIT
+"macro (show) NOPROCESS"
+"(mem) = member"
+"(dsn) = dataset"
+"(currline c) = cursor"
+address ISPEXEC
+"vget (cicsload pvsyns1 pvsyns2 pvsyns3 pvsyns4 pvsyns5 pvsyns6 pvsynd1",
+      "pvsynd2 pvsynd3 pvsynd4 pvsynd5 pvsynd6 cics db2 viewlist) PROFILE"
+if show <> '' then
+ do
+  'display panel(pvsyntax)'
+  if rc <> 0 then
+   exit 0
+  "vput (cicsload pvsyns1 pvsyns2 pvsyns3 pvsyns4 pvsyns5 pvsyns6 pvsynd1",
+        "pvsynd2 pvsynd3 pvsynd4 pvsynd5 pvsynd6 cics db2 viewlist) PROFILE"
+ end
+address TSO
+call free_em
+"alloc fi(sysin) da('"dsn"("mem")') shr"
+syslibs = ''
+do i = 1 to 6
+ interpret "tempval = pvsyns" || i
+ if tempval <> '' then
+  if syslibs <> '' then
+   syslibs = syslibs',' "'"tempval"'"
+  else
+   syslibs = "'"tempval"'"
+end
+
+"alloc fi(syspunch) dummy"
+"alloc fi(syslin) dummy"
+do i = 1 to 15
+ "alloc fi(sysut"i") new space(2 2) CYL"
+end
+"alloc fi(sysmdeck) new space(2 2) CYL"
+"alloc fi(sysprint) new cyl space(5 5)"
+parms = 'NOSEQ,OFFSET,MAP,NOTERM,NONUM,LC(0)' /* NONUMBER, LINECOUNT(0) */
+if translate(cics) = 'Y' then
+ do
+  parms = parms',CICS'
+  "STEPLIB ALLOCATE DATASETS('"cicsload"') SHR NOMSGS" /* CBTTAPE file 452 */
+ end
+if translate(db2)  = 'Y' then
+ do
+   do i = 1 to 6
+    interpret "tempval = pvsynd" || i
+    if tempval <> '' then
+     if syslibs <> '' then
+      syslibs = syslibs',' "'"tempval"'"
+     else
+      syslibs = "'"tempval"'"
+   end
+   parms = parms",CP(1047),SQL(''APOSTSQL'')"
+   junkdbrmlib = userid()'.dbrmjunk'
+   "alloc fi(junk) new catalog da('"junkdbrmlib"') recfm(f b) lrecl(80)",
+     "tracks space(1,1) dir(1) dsorg(PO)"
+   "alloc fi(DBRMLIB) da('"junkdbrmlib"(junk)') shr"
+ end
+if syslibs <> '' then
+ "alloc fi(syslib) da("syslibs") shr"
+"CALL *(IGYCRCTL) '"parms"'"
+if translate(db2)  = 'Y' then
+ do
+  shhh = msg('OFF')
+  "delete '"junkdbrmlib"'"
+  talk = msg('ON')
+ end
+if translate(cics) = 'Y' then
+ "STEPLIB FREE NOMSGS"   /* CBTTAPE file 452 */
+if viewlist = 'Y' then
+ do
+  address ISPEXEC
+  "lminit dataid(dataid) ddname(sysprint) enq(shr)"
+  "view dataid("dataid")"
+  "lmfree dataid(dataid)"
+ end
+address TSO
+"execio * diskr sysprint (stem in. finis)"
+call free_em
+address ISREDIT
+errors = 0
+'(line1) = line 1'
+if word(line1,1) = 'PROCESS' then
+ offset = -1
+else
+ offset = 0
+inMessages = 0
+do i = 1 to in.0
+ if substr(in.i,10,2) == 'C ' | substr(in.i,10,2) == 'C*' then
+  call process_copybook_line
+ parse var in.i '==> IGY' rest
+ if rest <> '' then
+  call process_message
+ if in.i = 'LineID  Message code  Message text' then
+  do
+   inMessages = 1
+   "(zlast) = linenum .zlast"
+  end
+ if in.i = '-Messages    Total    Informational    Warning    Error' then
+  inMessages = 0
+ if inMessages then
+  do
+   parse var in.i lineID rest
+   if (datatype(lineID)  = 'NUM' & pos(lineID, embedded) = 0) | ,
+       left(lineid,3) = 'IGY' then
+    do
+     if left(lineid,3) = 'IGY' then
+      rest = in.i
+     else
+      rest = strip(rest)
+     rest = wordwrapper(rest, 70)
+     parse var rest first (tab_char) second (tab_char) third
+     if third <> '' then
+       "line_after" zlast "= msgline (third)"
+     if second <> '' then
+       "line_after" zlast "= msgline (second)"
+     "line_after" zlast "= msgline (first)"
+    end
+  end
+end
+lastlinenum = in.0
+lastline = in.lastlinenum
+note = substr(lastline,2)
+"line_after 0 = noteline (note)"
+/*
+"locate" first_msgline
+"up 3"
+*/
+if note <> 'Return code 0' then
+ do
+  address ISPEXEC
+  'ADDPOP' /* POPLOC(target)'  */
+  'display panel(returncd)'
+  'REMPOP'
+ end
+exit
+
+free_em:
+address TSO
+shhh = msg('OFF')
+"free fi(sysut1 sysut2 sysut3 sysut4 sysut5 sysut6 sysut7 sysut8 sysut9",
+        "sysut10 sysut11 sysut12 sysut13 sysut14 sysut15 sysmdeck sysprint",
+        "syslin syspunch sysin syslib dbrmlib junk)"
+talk = msg('ON')
+return
+
+process_copybook_line:
+ copybook = substr(in.i,19)
+ parse var in.i 4 linenum 10 .
+ "line_before" linenum - offset "= noteline (copybook)"
+ offset = offset + 1  /* cater for the extra line */
+return
+
+process_message:
+ errors = errors + 1
+ rest = strip(substr(in.i,13))
+ /* cater for multi-line message */
+ j = i + 1
+ if left(in.j, 25) = ' ' & substr(in.j, 26) <> ' ' then /* msg continues */
+  do
+   rest = rest strip(in.j)
+   j = j + 1
+   if left(in.j, 25) = ' ' & substr(in.j, 26) <> ' ' then /* msg continues */
+    rest = rest strip(in.j)
+  end
+ rest = strip(rest)
+ parse var in.i linenum junk
+ linenum = substr(linenum,3,6) /* ==002900==>  -> 000029 */
+ embedded = embedded linenum /* add to list for later */
+ rest = wordwrapper(rest, 70)
+ parse var rest first (tab_char) second (tab_char) third
+ if third <> '' then
+   "line_after" linenum - offset "= msgline (third)"
+ if second <> '' then
+   "line_after" linenum - offset "= msgline (second)"
+ "line_after" linenum - offset "= msgline (first)"
+ if first_msgline = 0 then
+  first_msgline = linenum - offset
+return
+
+wordwrapper:
+parse arg wrapme, cut_here
+if length(wrapme) <= cut_here then
+ return wrapme
+else
+ do
+  lastSpace = lastpos(' ',left(wrapme,cut_here))
+  first = left(wrapme,lastSpace)
+  second = substr(wrapme,lastSpace + 1)
+  if length(second) <= cut_here then
+   return first || tab_char || second
+  else
+   do
+    lastSpace = lastpos(' ',left(second, cut_here))
+    third = substr(second,lastSpace + 1)
+    second = left(second, cut_here)
+    return first || tab_char || second || tab_char || third
+   end
+ end

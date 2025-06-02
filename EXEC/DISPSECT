@@ -1,0 +1,28 @@
+/* Rexx edit macro to add DISPLAY statements to a Telon program */
+address ISREDIT
+"macro () NOPROCESS"
+"x all"
+"f p'^' 8 all"
+"x all eject"
+"x all skip1"
+"x all skip2"
+"x all skip3"
+"x all '*' 7"
+"f procedure 8"
+"(l c) = cursor"
+l = l + 1
+"(zlast) = linenum .zlast"
+do i = zlast to l by -1
+ "(LINEX) = XSTATUS" i
+ notExcluded = LINEX = 'NX'
+ if notExcluded then
+  do
+   "(linedata) = line" i
+   if pos('-RETURN',linedata) = 0 then
+    do
+     insert = "             DISPLAY '"strip(linedata)"'."
+     "line_after" i "= (insert)"
+    end
+  end
+end
+exit

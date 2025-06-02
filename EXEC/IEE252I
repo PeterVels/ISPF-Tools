@@ -1,0 +1,98 @@
+/* Rexx edit macro to show parmlib members.
+
+Usage:  View SYSLOG somehow. Issue command IEE252I. Enjoy.
+        Line command PL invokes this macro
+
+Author: Peter Vels 18 Apr 2012
+
+*/
+offset = 66 /* <--- you might need to modify this */
+offset2 = offset + 1
+"delstack"
+address ISREDIT
+"macro (nothing) NOPROCESS"
+"f iea371i last" /* Find last IPL */
+if rc <> 0 then
+ do
+  say 'No IPL in this SYSLOG'
+  exit 4
+ end
+"label .zcsr = .ipl"
+"del all .zf .ipl"
+"x all"
+call get_symbols
+"x all"
+"f IEE252I all"
+"del all x"
+"c 38 47 p'^' ' ' all"
+"res"
+"(zlast) = linenum .zl"
+members = ''
+address ISPEXEC
+"control errors return"
+"tbend iee255i"
+"control errors cancel"
+"tbcreate iee252i keys(dsn) names(selectn tm) nowrite"
+do i = 1 to zlast
+ address ISREDIT "(linedata) = line" i
+ parse var linedata . . lpar dt tm . . .  member . . pds .
+ member = strip(member)
+ if wordpos(member,members) = 0 then
+ do
+  members = members member
+  selectn = ' '
+  dsn = pds"("member")"
+  "tbadd iee252i"
+ end
+end
+rv = 0
+do while rv = 0
+ rv = disptabl('iee252i')
+ if rv < 5 & ZTDSELS > 0 then
+  do
+   if selectn = 'V' | selectn = 'E' then
+    do
+     if selectn = 'V' then
+      func = 'view'
+     else
+      func = 'edit'
+     address ispexec func "dataset('"dsn"') macro(reslvsym)"
+    end
+   else
+    address ispexec "browse dataset('"dsn"')"
+  end
+end
+"TBEND iee252i"
+"TBEND symtabl"
+address ISREDIT
+"can"
+exit
+
+disptabl:
+arg table
+"TBTOP" Table
+"TBDISPL" Table "PANEL("Table")"
+drc = RC
+return drc
+
+get_symbols:
+address ISPEXEC
+"control errors return"
+"tbend symtabl"
+"control errors cancel"
+"tbcreate symtabl keys(symword) names(symval) nowrite"
+address ISREDIT
+"f 'IEA007I STATIC SYSTEM SYMBOL VALUES' last"
+rv = 0
+do while rv = 0
+ "f &" offset
+ rv = rc
+ if rv = 0 then
+  do
+   "(symline) = line .zcsr"
+   parse var symline (offset2) symword '.' '= "' symval '"'
+   address ISPEXEC "tbadd symtabl"
+   if rc <> 0 then say 'TBADD failure in IEE252I'
+  end
+end
+return

@@ -1,0 +1,21 @@
+/* Rexx edit macro to remove comments from JCL */
+trace i
+address ISREDIT
+'macro () NOPROCESS'
+'(zlast) = linenum .zlast'
+do i = 1 to zlast
+ '(linedata) = line' i
+ if left(linedata,3) = '//*' then
+  do
+/*
+*/
+   'label' i '= .kill 0'
+   'x all .kill .kill'
+   'del all x'
+   'res label'
+   zlast = zlast - 1
+  end
+end
+exit
+/*
+*/

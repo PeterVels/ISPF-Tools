@@ -1,0 +1,24 @@
+/* Rexx to display ALIASes */
+/* ALIAS --------- PETER
+        IN-CAT --- CATALOG.Z24C.MASTER
+        HISTORY
+   --USECAT--usercat */
+address TSO
+x = outtrap('a.')
+"listc alias all"
+x = outtrap('OFF')
+do i = 1 to a.0
+ if pos('ALIAS ---------', a.i) > 0 then
+  parse var a.i 'ALIAS ---------' alias .
+ if pos('USERCAT--', a.i) > 0 then do
+  parse var a.i 'USERCAT--' usercat .
+  if pos('Z',usercat) = 0 then do
+   x = outtrap('v.')
+   "listc ent('"usercat"') vol"
+   x = outtrap('OFF')
+   parse var v.6 'VOLSER------------' volser .
+   say left(alias,8) volser usercat
+  end
+ end
+end
+exit

@@ -1,0 +1,73 @@
+/* Tyrannosaurus rexx */
+/* Actually, it's a pounds, shillings and pence change calculator */
+signal on novalue
+address ISPEXEC
+msg = ''
+do forever
+ 'display panel(lsd)'
+ if rc = 0 then
+  call mainline
+ else
+  leave
+end
+exit
+
+mainline:
+msg = ''
+/*
+  pl = price pounds
+  ps = price shillings
+  pd = price pence
+  tl = tendered pounds
+  ts = tendered shillings
+  td = tendered pence
+  cl = change pounds
+  cs = change shillings
+  cd = change pence
+*/
+if pl = '' then pl = 0;
+if ps = '' then ps = 0;
+if pd = '' then pd = 0;
+if tl = '' then tl = 0;
+if ts = '' then ts = 0;
+if td = '' then td = 0;
+tendered = (tl * 20 * 12) + (ts * 12) + td
+price    = (pl * 20 * 12) + (ps * 12) + pd
+cl = 0; cs = 0; cd = 0
+select
+ when tendered < price then
+  msg = 'Not enough money tendered. Try again'
+ when tendered = price then
+   msg = 'No change required; exact money tendered'
+ otherwise
+  do
+   totalChange = tendered - price
+   /* totalChange will now be some number of pence */
+   /* In the old days, a real person would count out (up) the change,
+      starting at the pence and ending with the pounds.
+      for now, we'll ignore threepence, sixpence and guineas!
+      We'll implement those later */
+   if tendered > 2399 | price > 2399 then
+     msg = 'Something is wrong with the Rexx. Error code 1'
+   else
+    do
+     Pence = td
+     Shillings = ts
+     Pounds = tl
+     if Pence < pd then
+      do
+       Pence = Pence + 12
+       Shillings = Shillings - 1
+      end
+     if Shillings < ps | Shillings < 0 then
+      do
+       Shillings = Shillings + 20
+       Pounds = Pounds - 1
+      end
+     cd = Pence - pd
+     cs = Shillings - ps
+     cl = Pounds - pl
+    end
+  end
+end
+return

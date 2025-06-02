@@ -1,0 +1,27 @@
+)ATTR DEFAULT($+_)
+  _ TYPE(INPUT)   INTENS(HIGH) CAPS(ON)
+   AREA(DYNAMIC) SCROLL(ON) EXTEND(ON)
+ 01 TYPE(DATAOUT) INTENS(LOW)          COLOR(GREEN ) /* COMMAND NAME TITLE   */
+ 02 TYPE(DATAOUT) INTENS(LOW)          COLOR(YELLOW) /* MESSAGE              */
+ 03 TYPE(DATAOUT) INTENS(LOW)          COLOR(BLUE  ) /* VOLUME               */
+ 04 TYPE(DATAOUT) INTENS(LOW)          COLOR(TURQ  ) /* SEPERATOR LINE       */
+ 05 TYPE(DATAIN)  INTENS(LOW) CAPS(ON) COLOR(GREEN ) /* COMMAND NAME FIELD   */
+ 06 TYPE(DATAOUT) INTENS(LOW)          COLOR(PINK  ) /* SPACE INFO           */
+ 07 TYPE(DATAOUT) INTENS(LOW)          COLOR(TURQ  ) /* ATTRIB INFO          */
+ 08 TYPE(DATAOUT) INTENS(LOW)          COLOR(RED   ) /* DATE INFO            */
+ 09 TYPE(DATAOUT) INTENS(LOW)          COLOR(TURQ  ) /* END OF LIST LINE     */
+ 10 TYPE(DATAOUT) INTENS(LOW)                        /* AFTER END OF LIST    */
+ 11 TYPE(DATAOUT) INTENS(LOW) COLOR(RED) HILITE(REVERSE) /* ERROR MESSAGE    */
+)BODY WIDTH(80)
+$&ZDLTITLE                                                                     +
+$COMMAND ===>_ZCMD                                            $SCROLL ===>_ZUSC+
++
+ZDATA ------------------------------------------------------------------------
+                                                                              
+ -----------------------------------------------------------------------------
+)INIT
+  .HELP = ISR34014
+)PROC
+  VPUT (ZUSC) PROFILE
+  &LASTLN = LVLINE(ZDATA)
+)END

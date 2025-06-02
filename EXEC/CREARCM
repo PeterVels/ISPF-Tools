@@ -1,0 +1,688 @@
+ /* REXX                                                              */
+ /* REXX-EXEC: CREARCM                                                */
+ /*********************************************************************/
+ /*                                                        CREARCM    */
+ /* ----------------------------------------------------------------- */
+ /*                                 AUTHOR :  WAYNE BICKERDIKE        */
+ /*                                 DATE   :  MAY 2011                */
+ /************************************ REXX COMMENT *******************/
+ /*  CREARCM                                                          */
+ /*  -------                                                          */
+ /*  A REXX-EXEC TO BUILD ARCHDEF STATEMENTS                          */
+ /*  BASED ON A MASK                                                  */
+ /*                                                                   */
+ /*********************************************************************/
+ arg argline
+ address ISPEXEC                       /* REXXSKEL ver.20020513      */
+ arg parms "((" opts
+ SYSUID = SYSVAR(SYSUID)
+ INTERPRET "SYSDATE=DATE('N')"
+ dat= DATE('J')
+ dat = 'D' || dat
+ tod = time()
+ /* remove colons */
+ parse value tod with w1 ':' w2 ':' w3
+ tod = 'T'||w1||w2||w3 /* set time value string */
+ /*********************************************************************/
+ /* Initialize program variables.                                     */
+ /* They are global in scope.                                         */
+ /*********************************************************************/
+  Q = '7D'X
+  er = ""   /* validation error */
+ /*********************************************************************/
+ /* The variables defined below are referenced by the                 */
+ /* file tailor skeletons.                                            */
+ /*********************************************************************/
+   INFILE   = ''
+   Filter   = ''
+   Filter2  = ''
+   Archtype = ''
+   Member   = ''
+   Ofil     = ''
+   COMPRESS = 'Y'
+   ROUT.0   = 0
+   libmem.  = ''
+
+  "ISPEXEC VGET (INFILE OFIL FILTER COMPRESS SINGLE ARCHTYPE) PROFILE"
+
+  If INFILE = '' Then INFILE = 'MUST.ENTER.FILE'
+  If Filter = '' Then Filter = '*'
+  If COMPRESS = '' Then COMPRESS = 'Y'
+  If Ofil    = '' Then Ofil = 'MUST.ENTER.NAME'
+  If Archtype = ' '  Then Archtype = 'ARCHLEC1'
+  "ISPEXEC VPUT (INFILE OFIL FILTER COMPRESS SINGLE ARCHTYPE) PROFILE "
+
+
+ /*********************************************************************/
+/* SIGNAL ON SYNTAX */
+/* SIGNAL ON NOVALUE */
+
+ CALL deimbed
+/*********************************************************************/
+/* Derive the necessary PANEL LIBDEFS etc                            */
+/*********************************************************************/
+   CALL LIBDEFS
+/*********************************************************************/
+/*********************************************************************/
+/* Display panel CREARCM and control the                             */
+/* generation of file tailoring.                                     */
+/*********************************************************************/
+ csr = "cursor(INFILE)"
+ do forever
+ redisp:
+ message = 'msg('er')'
+  ' ISPEXEC DISPLAY PANEL(CREARCM)' MESSAGE CSR
+   if   rc = 8 then leave
+   er = ''
+   CALL CheckDSN(INFILE)
+   If er <> '' Then Do
+      csr = "cursor(infile)"
+      SIGNAL redisp
+   End
+   CALL CheckDSN(ofil)
+   If er <> '' Then Do
+      csr = "cursor(ofil)"
+      SIGNAL redisp
+   End
+   Cfile = "'"Ofil"'"
+   If COMPRESS = "Y" Then Call Compress(Cfile)
+   Call Process_Member(infile)
+
+  "ISPEXEC VPUT (INFILE OFIL FILTER COMPRESS ARCHTYPE) PROFILE "
+/* Display the Prompter panel for Edit and invoke edit for the pds */
+   ADDRESS ISPEXEC
+      'DISPLAY PANEL(CONFIRMP)'
+   IF RC = 8 THEN NOP
+   ELSE DO
+          "ISPEXEC EDIT DATASET ('"ofil"') MACRO(NONE) "
+   END
+GETOUT:
+END
+CALL LIBDROPS
+EXIT
+ /*********************************************************************/
+ /*  END OF MAIN PROGRAM.                                             */
+ /*         SUBROUTINES, FUNCTIONS, AND SIGNAL LABELS FOLLOW          */
+ /*********************************************************************/
+             /* PROCEDURE TO TRAP AND HANDLE ALL REXX/TSO ERRORS      */
+             /* ----------------------------------------------------- */
+ ERROR:
+   SAY 'CREARCM: NON-ZERO RETURN CODE FROM EXEC COMMAND,'
+   SAY ' AT SOURCE LINE=' SIGL', RC='RC
+   SAY SOURCELINE(SIGL)
+   SIGNAL OFF NOVALUE
+   EXIT 20
+ /*********************************************************************/
+             /* PROCEDURE TO TRAP UN-INITIALISED VARIABLES            */
+             /* ----------------------------------------------------- */
+ NOVALUE:
+   SAY 'CREARCM: UNINITIALIZED VARIABLE USED, AT SOURCE LINE=' SIGL
+   SAY SOURCELINE(SIGL)
+   SIGNAL OFF ERROR
+   EXIT 30
+
+
+
+Select_mem:
+  req = 0
+  If filter <> '*' Then Do
+     Parse value filter with filval '*' .
+     fillen = length(filval)
+     If substr(member,1,fillen) = filval
+     Then req = 1
+  End
+  Else req = 1
+  If filter2 <> ' ' Then Do
+     Parse value filter2 with filval '*' .
+     fillen = length(filval)
+     If substr(member,1,fillen) = filval
+     Then req = 0
+     Else req = req
+  End
+RETURN
+Process_Member:
+/* REXX */
+/*********************************************************************/
+/* REXX PROGRAM TO CREATE ARCHDEFS                                   */
+/* OF AN INPUT PDS (PER LANGUAGE).                                   */
+/*********************************************************************/
+ ARG Indsn
+ Q = '7F'X    /* DOUBLE QUOTE */
+ SAY 'Indsn = 'Indsn
+ DUMMY = OUTTRAP("CMD_OUTPUT_LINE.","*")
+ ADDRESS TSO
+ "LISTDS '"Indsn"' MEMBERS"
+ NUMBER_OF_MEMBERS = CMD_OUTPUT_LINE.0 - 6
+ DO I = 7 TO CMD_OUTPUT_LINE.0
+ J = 0
+ MEMBER = SUBSTR(CMD_OUTPUT_LINE.I,3,8)
+ MEMBER = STRIP(MEMBER)
+ Call Select_Mem
+  If req = 1 Then do
+  "ISPEXEC LIBDEF ISPFILE DATASET ID('"ofil"')"
+  "ISPEXEC FTOPEN "
+  ADDRESS ISPEXEC
+  "FTINCL " ARCHTYPE
+  SELECT
+  WHEN (ARCHTYPE) = 'ARCHLEC1'
+   THEN DO
+         /* MAKE BATCH ARCHLEC BBB...*/
+        IF SUBSTR(MEMBER,3,3) = 'B2B'
+        THEN MEMBER = 'BB' || SUBSTR(MEMBER,3)
+   END
+  WHEN (ARCHTYPE) = 'ARCHDEF5'
+   THEN DO
+         /* MAKE BATCH ARCHDEF BBB...*/
+        IF SUBSTR(MEMBER,3,3) = 'B2B'
+        THEN MEMBER = 'BB' || SUBSTR(MEMBER,3)
+   END
+  OTHERWISE NOP /* ALL OTHERS ARE NOT B2B MODULES */
+  END
+  IF Single = "Y" Then Nop
+  Else Do
+  SAY "CREATING ARCHDEF " MEMBER
+  "ISPEXEC FTCLOSE NAME("MEMBER")"
+  End
+  End
+ End
+ IF Single = "Y" Then Do
+ MEMBER = "ALLARCH"
+ SAY "CREATING ARCHDEF " MEMBER
+ "ISPEXEC FTCLOSE NAME("MEMBER")"
+ End
+Return
+PUTPDS:
+/*------------------------------------------------------------*/
+/* REXX create member  in a pds */
+/*                                                            */
+/* Routine: PUTPDS                                            */
+/*                                                            */
+/*------------------------------------------------------------*/
+arg ii
+Parse value ii with of ',' om
+ADDRESS TSO
+"ALLOC F(FILEIN) DA('"of"("om")') SHR REUSE"
+/* Write and close the file            */
+"EXECIO * DISKW FILEIN (STEM rout. FINIS)"
+"FREE  F(FILEIN)                             "
+RETURN
+
+LIBDROPS:
+   ADDRESS ISPEXEC
+/*     DROP LIBDEFS                                                  */
+   dd = ""
+   do Words(ddnlist)                   /* each LIBDEF DD             */
+      parse value ddnlist dd  with  dd ddnlist
+      $ddn   = $ddn.dd                 /* PLIB322 <- PLIB            */
+      "LIBDEF  ISP"dd
+      ADDRESS TSO
+      "FREE FI("$ddn")"
+   ADDRESS ISPEXEC
+   end
+   ddnlist = ddnlist dd
+RETURN
+Allocpds:
+ARG iparm
+parse value iparm with ipds ',' prim ',' sec ',' dir ',' cyl
+/*********************************************************************/
+/* Allocate PDS for file tailoring                                   */
+/*********************************************************************/
+   ADDRESS TSO
+
+tFIL   = q||IPDS||q
+IF SYSDSN(tFIL) = 'DATASET NOT FOUND' THEN DO
+  " ALLOC DA("tFIL") F(ISPFILE) ",
+  "DIR("dir") SPACE("PRIM","SEC") "CYL,
+  "RECFM(F B) LRECL(80) BLKSIZE(0)"
+  " FREE F(ISPFILE) "
+END
+RETURN
+B_LISTDS:                              /*@                           */
+   address TSO
+   ff = q||INFILE||q
+   X = OUTTRAP("libmem.")
+   "LISTDS "ff" MEMBERS"
+   X = OUTTRAP("OFF")
+
+return                                 /*@ B_LISTDS                  */
+CheckDSN:
+ARG itest
+parse value itest with IDSN
+
+ADDRESS TSO
+"PROFILE NOPREFIX"
+IF SYSDSN(IDSN)   = 'DATASET NOT FOUND' THEN er ='DDCL017'
+getout1:
+"PROFILE PREFIX("SYSUID")"
+RETURN
+
+
+LIBDEFS:
+/*********************************************************************/
+/* Address the ISPEXEC environment                                   */
+/* Needed to issue ISPF commands                                     */
+/*********************************************************************/
+   ADDRESS ISPEXEC
+/*     This is how to setup the LIBDEFs                              */
+   dd = ""
+   do Words(ddnlist)                   /* each LIBDEF DD             */
+      parse value ddnlist dd  with  dd ddnlist
+      $ddn   = $ddn.dd                 /* PLIB322 <- PLIB            */
+      "LIBDEF  ISP"dd "LIBRARY  ID("$ddn") STACK"
+   end
+   ddnlist = ddnlist dd
+/*********************************************************************/
+RETURN
+
+
+/*
+   Parse out the embedded components at the back of the source code.
+
+   The components are enclosed in a comment whose start and end are on
+   individual lines for easier recognition.
+
+   Each component is identified by a triple-close-paren ")))" in
+   column 1 followed by a DDName and a membername.  The text of the
+   component begins on the next line.
+
+   There are no restrictions on the DDName, but it is probably a good
+   idea to pick a name which relates to its use so that mainline
+   processing can, for example, determine what sort of LIBDEF to do.
+   Note also that a 3-digit random number will be generated for each
+   DDName to guard against the possibility that processing may be
+   interleaved or recursive.  It is up to the programmer to add the
+   code to properly LIBDEF each component type.
+
+   Maintainers will also have to know that TOOLKIT_INIT is not the last
+   item in the source code.  It is STRONGLY RECOMMENDED that a
+   prominent notice be placed at the beginning of the code so that
+   future maintainers will be put immediately on notice that embedded
+   components exist.  The following may serve that purpose:
+
+   |**-***-***-***-***-***-***-***-***-***-***-***-***-***-***-***-**|
+   |                                                                 |
+   |          WARNING: EMBEDDED COMPONENTS.                          |
+   |                      See text following TOOLKIT_INIT            |
+   |                                                                 |
+   |**-***-***-***-***-***-***-***-***-***-***-***-***-***-***-***-**|
+
+.  ----------------------------------------------------------------- */
+DEIMBED: Procedure expose,             /*@                           */
+   (tk_globalvars)  ddnlist  $ddn.  daid.
+
+   address TSO
+
+   fb80po.0  = "NEW UNIT(SYSDA) SPACE(5 5) TRACKS DIR(40)",
+                   "RECFM(F B) LRECL(80) BLKSIZE(0)"
+   parse value ""   with  ddnlist $ddn.  daid.
+
+   lastln   = sourceline()
+   currln   = lastln                   /*                            */
+   if Left(sourceline(currln),2) <> "*/" then return
+
+   currln = currln - 1                 /* previous line              */
+   "NEWSTACK"
+   address ISPEXEC
+   do while sourceline(currln) <> "/*"
+      text = sourceline(currln)        /* save with a short name !   */
+      if Left(text,3) = ")))" then do  /* package the queue          */
+         parse var text ")))" ddn mbr .   /* PLIB PANL001  maybe     */
+         if Pos(ddn,ddnlist) = 0 then do  /* doesn't exist           */
+            ddnlist = ddnlist ddn      /* keep track                 */
+            $ddn = ddn || Random(999)
+            $ddn.ddn = $ddn
+            address TSO "ALLOC FI("$ddn")" fb80po.0
+            "LMINIT DATAID(DAID) DDNAME("$ddn")"
+            daid.ddn = daid
+            end
+         daid = daid.ddn
+         "LMOPEN DATAID("daid") OPTION(OUTPUT)"
+         do queued()
+            parse pull line
+            "LMPUT DATAID("daid") MODE(INVAR) DATALOC(LINE) DATALEN(80)"
+         end
+         "LMMADD DATAID("daid") MEMBER("mbr")"
+         "LMCLOSE DATAID("daid")"
+         end                           /* package the queue          */
+      else push text                   /* onto the top of the stack  */
+      currln = currln - 1              /* previous line              */
+   end                                 /* while                      */
+   address TSO "DELSTACK"
+
+return                                 /*@ DEIMBED                   */
+/*
+))) PLIB CONFIRMP
+)ATTR
+ #   TYPE(OUTPUT)                   CAPS(OFF)
+      PADC(' ') SKIP(ON)               COLOR(YELLOW)
+ $ TYPE(INPUT) PADC(_) INTENS(HIGH)
+ % TYPE(TEXT)          INTENS(HIGH) COLOR(BLUE) SKIP(ON)
+ + TYPE(TEXT)          INTENS(LOW)  COLOR(YELLOW) SKIP(ON)
+)BODY
+%------------------------ Confirm action ---------------------------------------
+%OPTION  ===>_ZCMD                                                             +
++
++ Press Enter to edit generated PDS                                     +
+)END
+))) PLIB CREARCM
+)ATTR
+ #   TYPE(OUTPUT)                   CAPS(OFF)
+      PADC(' ') SKIP(ON)               COLOR(YELLOW)
+ $ TYPE(INPUT) PADC(_) INTENS(HIGH)
+ % TYPE(TEXT)          INTENS(HIGH) COLOR(BLUE) SKIP(ON)
+ + TYPE(TEXT)          INTENS(LOW)  COLOR(YELLOW) SKIP(ON)
+)BODY
+%------------------------ Build Archdef Members --------------------------------
+%OPTION  ===>_ZCMD                                                             +
++
+ %Specify Input PDS Name      ===>$z
++
+ %Specify Output PDS Name     ===>$z
++
+ %Include Filter (* for all)  ===>$z       +
++
+ %Exclude Filter              ===>$z       +(Blank for no exclude)
++
+ %Compress              (y/n) ===>$z+
++
+ %Single Archdef (Y/N)        ===>$z        +
++
+ %Archdef name                ===>$z        +
++
++ARCHLEC1 = COBOL BATCH DB2    : ARCHDEF1 = COBOL CICS
++ARCHLEC2 = COBOL CICS DB2     : ARCHDEF2 = COBOL CICS DB2
++ARCHLEC3 = COBOL CICS DATACOM : ARCHDEF3 = BMS Maps
++ARCHLEC4 = COBOL CICS MQ      : ARCHDEF4 = COBOL CICS MQ
++ARCHLEC5 = COBOL DB2 NO CICS  : ARCHDEF5 = COBOL BATCH
++ARCHLEC6 = B2BDATE            : ARCHDEF6 = COBOL BATCH DB2
++                              : ARCHDEF7 = HLASM ZPARMS ETC
++ARCHLEC7 = COBOL B2BC2H2 ETC (ONLINE NO CICS NO DB2)
++ARCHLEC8 = COBOL BATCH MQ     : ARCHDEF8 = PARMS TEXT ETC
++ARCHLEC9 = ASM CICS           : ARCHDEF9 = ASM CICS
++
++PKGBIND  = PKGBIND Statements
++
++
+ %..............................................................................
++
+   %PF3           - Exit
+)INIT
+  .HELP = HELP1
+  .ZVARS = '(INFILE ofil filter filter2 compress single archtype   +
+                       )'
+  &VARL = '(INFILE ofil compress)'
+)PROC
+     VER (&INFILE,NB,MSG=DDCL017)
+     VER (&ofil,NB,MSG=DDCL017)
+     VER (&compress,NB,MSG=DDCL018)
+     VER (&compress,list,Y,N,MSG=DDCL018)
+)END
+))) PLIB TUTOR1
+)ATTR DEFAULT(%+_)
+)BODY
+ ------------------------ Build Archdef Members -------------------------
+ OPTION  ===>
+
+  Specify Input PDS Name      ===> IDLALFA.PROD.SOURCE
+
+  Specify Output PDS Name     ===> IDLALFA.PROD.ARCHLEC
+
+  Include Filter (* for all)  ===> ISI*
+
+  Exclude Filter              ===>          (Blank for no exclude)
+
+  Compress              (y/n) ===> Y
+
+  Archdef name                ===> ARCHLEC2
+
+ ARCHLEC1 = Batch DB2  : ARCHLEC2 = CICS COBOL DB2
+
+ ARCHDEF3 = BMS Maps   : ARCHLEC4 = CICS COBOL
+
+ ARCHLEC5 = B2BDATE    : PKGBIND  = PKGBIND Statements
+
+ ARCHDEF1 = CICS COBOL : ARCHDEF2 = COBOL CICS DB2
+
+
+  .......................................................................
+
+    PF3           - Exit
+)END
+))) PLIB HELP1
+)ATTR DEFAULT(%+_)
+      /*  % TYPE(TEXT) INTENS(HIGH)      defaults displayed for      */
+      /*  + TYPE(TEXT) INTENS(LOW)       information only            */
+      /*  _ TYPE(INPUT) INTENS(HIGH) CAPS(ON) JUST(LEFT)             */
+)BODY
+%---------------------------  HELP FOR CREARCM UTILITY  ------------------------
+%SELECTION ===>_ZCMD                                                           +
+%
+%                     -----------------------------------
+                      |       USING CREARCM             |
+                      -----------------------------------
++  This utility will generate a set of ARCHDEF statments from a PDS.
+
+   Specify an input PDS from which members are to be selected.
+
+   Specify an output PDS to write the generated ARCHDEFS to.
+
+
+   A template member must be specified depending on the language.
+
+   Language types:
+                      BMS            - BMS
+                      COPY CODE      - COPY
+                      ARCHDEF        - ARCHDEF
+                      ARCHLEC        - ARCHLEC
+                      COBOL/DB2      - COB3DB2
+                      PACKAGE BIND   - PKGBIND
+                      CICS/COBOL/DB2 - CIDB2CO2
+
+  %1+ To view an example of how to complete the request.
+  %2+ To view an example of the generated ARACHDEFs.
+
+)PROC
+     &ZSEL = TRANS( &ZCMD
+                1,TUTOR1
+                2,TUTOR2
+                3,*TUTOR3
+                *,'?'
+                )
+     &ZUP = HELP1
+)END
+))) SLIB COB3DB2
+*
+* NAME:  &MEMBER
+*
+INCL   &MEMBER  ARCHLEC
+))) SLIB ARCHDEF
+*
+* NAME:  &MEMBER
+*
+INCL   &MEMBER  ARCHLEC
+))) SLIB ARCHDEF4
+*
+* NAME:  &MEMBER
+*
+INCL   &MEMBER  ARCHLEC
+))) SLIB ARCHLEC1
+*
+* NAME:  &MEMBER
+* LINK EDIT CONTROL(LEC) ARCHDEF FOR COBOL BATCH
+*
+INCLD  &MEMBER   SOURCE * COMPILE SOURCE
+CMD   INCLUDE SYSLIB(DSNELI)
+LOAD   &MEMBER   LOAD   * LINK EDIT LOAD MODULE
+LMAP   &MEMBER   LMAP   * LINK-EDIT LISTING
+))) SLIB ARCHLEC2
+* ARCHLEC FOR ONLINE PROGRAM  &MEMBER
+*
+INCLD &MEMBER SOURCE
+CMD   INCLUDE SYSLIB(DSNCLI)
+CMD   INCLUDE SYSLIB(DFHEI1)
+*
+LOAD  &MEMBER  LOAD
+LMAP  &MEMBER LMAP
+))) SLIB ARCHLEC3
+* ARCHLEC FOR ONLINE DATACOM PROGRAM  &MEMBER
+*
+INCLD &MEMBER SOURCE
+CMD   INCLUDE SYSLIB(DSNCLI)
+CMD   INCLUDE SYSLIB(DFHECI)
+CMD   INCLUDE SYSLIB(DBCSVPR)
+*
+LOAD  &MEMBER  LOAD
+LMAP  &MEMBER LMAP
+))) SLIB ARCHDEF3
+* ARCHDEF FOR BMS MAP ASSEMBLE AND LINK  &MEMBER
+INCLD  &MEMBER  BMS     * ASSEMBLE SOURCE
+LOAD   &MEMBER  LOAD    * LINK EDIT LOAD MODULE
+LMAP   &MEMBER  LMAP    * LINK LIST
+))) SLIB ARCHDEF7
+* ARCHDEF FOR ZPARM ASSEMBLE AND LINK  &MEMBER
+INCLD  &MEMBER HLAS     * ASSEMBLE SOURCE
+LOAD   &MEMBER  LOAD    * LINK EDIT LOAD MODULE
+LMAP   &MEMBER  LMAP    * LINK LIST
+))) SLIB ARCHDEF9
+* ARCHDEF FOR ASM CICS AND LINK &MEMBER
+INCLD  &MEMBER ARCHLEC  * ASSEMBLE AND LINK STATEMENTS
+))) SLIB ARCHDEF8
+* SOURCE MEMBER  &MEMBER
+  PROM  &MEMBER TEXT
+))) SLIB ARCHLEC4
+*
+* NAME:  &MEMBER
+* LINK EDIT CONTROL(LEC) ARCHDEF FOR COBOL CICS NO DB2
+*
+INCLD  &MEMBER  SOURCE * COMPILE SOURCE
+CMD    INCLUDE SYSLIB(DFHECI)
+LOAD   &MEMBER  LOAD   * LINK EDIT LOAD MODULE
+LMAP   &MEMBER  LMAP   * LINK-EDIT LISTING
+))) SLIB ARCHLEC5
+* ARCHLEC FOR COBOL DB2 NO CICS SUBPROGRAM  &MEMBER
+INCLD  &MEMBER  SOURCE  * SOURCE PROGRAM
+CMD    INCLUDE SYSLIB(DSNCLI)
+LOAD   &MEMBER  LOAD    * LINK EDIT LOAD MODULE
+LMAP   &MEMBER  LMAP    * LINK LIST
+))) SLIB ARCHLEC6
+* ARCHLEC FOR SUBPROGRAM  &MEMBER
+INCLD  &MEMBER  SOURCE  * SOURCE PROGRAM
+CMD    INCLUDE SYSLIB(DFHECI)
+CMD    INCLUDE SYSLIB(DSNCLI)
+LOAD   &MEMBER   LOAD   * LINK EDIT LOAD MODULE
+LMAP   &MEMBER  LMAP    * LINK LIST
+))) SLIB ARCHLEC7
+* ARCHLEC FOR SUBPROGRAM  &MEMBER
+INCLD  &MEMBER  SOURCE  * SOURCE PROGRAM
+LOAD   &MEMBER   LOAD   * LINK EDIT LOAD MODULE
+LMAP   &MEMBER  LMAP    * LINK LIST
+))) SLIB ARCHDEF1
+*
+* NAME:  &MEMBER
+*
+INCL   &MEMBER ARCHLEC
+))) SLIB ARCHDEF2
+* NAME:  &MEMBER
+* ARCHDEF FOR CICS / DB2 COBOL
+INCL  &MEMBER ARCHLEC
+INCLD  &MEMBER PKGBIND
+))) SLIB ARCHLEC4
+* NAME:  &MEMBER
+* LINK EDIT CONTROL(LEC) ARCHDEF FOR COBOL CICS MQ
+INCLD &MEMBER SOURCE * COMPILE SOURCE
+CMD    INCLUDE SYSLIB(DFHECI)
+CMD    INCLUDE SYSLIB(CSQCSTUB)
+LOAD   &MEMBER  LOAD          * LINK-EDIT LOAD MODULE
+LMAP   &MEMBER LMAP           * LINK-EDIT LISTING
+))) SLIB ARCHLEC8
+* NAME:  &MEMBER
+* LINK EDIT CONTROL(LEC) ARCHDEF FOR COBOL BATCH MQ
+INCLD &MEMBER SOURCE * COMPILE SOURCE
+CMD    INCLUDE SYSLIB(CSQCSTUB)
+LOAD   &MEMBER  LOAD          * LINK-EDIT LOAD MODULE
+LMAP   &MEMBER LMAP           * LINK-EDIT LISTING
+))) SLIB ARCHLEC9
+* NAME:  &MEMBER
+* LINK EDIT CONTROL(LEC) ARCHDEF FOR ASM CICS
+INCLD &MEMBER SOURCE * COMPILE SOURCE
+CMD    INCLUDE SYSLIB(DFHECI)
+LOAD   &MEMBER  LOAD          * LINK-EDIT LOAD MODULE
+LMAP   &MEMBER LMAP           * LINK-EDIT LISTING
+))) SLIB ARCHDEF5
+* NAME:  &MEMBER
+* ARCHDEF FOR COBOL BATCH
+INCL  &MEMBER ARCHLEC
+))) SLIB ARCHDEF6
+* NAME:  &MEMBER
+* ARCHDEF FOR COBOL BATCH DB2
+INCL  &MEMBER ARCHLEC
+INCLD &MEMBER PKGBIND
+))) SLIB BIND
+//BINDALFA JOB (2BDB2),'BIND &MEMBER',
+//         CLASS=E,
+//         TIME=1440,
+//         REGION=6M,
+//         MSGCLASS=X,
+//         NOTIFY=&SYSUID,
+//         MSGLEVEL=(1,1)
+//*   BIND PACKAGE                                                */
+// SET GENHLQ=IDLALFA.BDB204
+// SET SDSNLOAD=DSN910.SDSNLOAD
+// SET SYSTEM='DB9G'
+//BIND    EXEC PGM=IKJEFT01,
+//             PARM='DSN SYSTEM(&&SYSTEM)',
+//             REGION=6M
+//STEPLIB  DD  DISP=SHR,DSN=&&SDSNLOAD
+//DBRMLIB  DD  DISP=SHR,DSN=&&GENHLQ..DBRM
+//SYSTSPRT DD  SYSOUT=*
+//SYSPRINT DD  SYSOUT=*
+//SYSTSIN  DD  *
+         BIND PACKAGE (ALFA)               -
+           OWNER        (BDB204)   -
+           QUALIFIER    (ALFA)     -
+           ACTION       (REPLACE) -
+           ISOLATION    (UR) -
+           FLAG         (I) -
+           RELEASE      (COMMIT) -
+           EXPLAIN      (NO) -
+           VALIDATE     (BIND) -
+           CURRENTDATA  (NO) -
+           NODEFER      (PREPARE) -
+           DYNAMICRULE  (BIND) -
+           KEEPDYNAMIC  (YES) -
+           NOREOPT      (VARS) -
+           MEMBER       (&MEMBER)
+         END
+))) SLIB PKGBIND
+/* REXX */
+ARG INPARMS
+PARSE VAR INPARMS '(' OPTION ' ' '(' GROUP ' '
+/********************************************************************/
+/* SPECIFY AN INCLUDE FOR THE DBRM TO BE INCLUDED IN THE DB2        */
+/* PACKAGE. SCLM TRACKS DEPENDENCY ON DBRMS WITH THE COMMENTED      */
+/* OUT INCLUDE STATEMENT.                                           */
+/********************************************************************/
+/*** THE INCLUDE STATEMENT MUST REMAIN COMMENTED OUT.              **/
+/********************************************************************/
+/*                                                                  */
+/* %INCLUDE &MEMBER                                                 */
+/*                                                                  */
+/********************************************************************/
+/* SET UP THE PARMS FOR A PACKAGE BIND.                             */
+/********************************************************************/
+MEMBER  = '&MEMBER'
+EXPLAIN = 'NO'
+/*----------------------------------------*/
+/* CALL SCLMBIND EXEC TO PERFORM BIND     */
+/*----------------------------------------*/
+PARMS = OPTION GROUP MEMBER EXPLAIN
+ADDRESS TSO "EX 'IDLALFA.PROD.SOURCE(REXXBIND)' '"PARMS"'"
+EXITCC = RC
+
+EXIT EXITCC
+))) MLIB DDCL01
+DDCL017 .ALARM=YES
+'Dataset not found in catalog'
+DDCL018 .ALARM=YES
+'Enter the required values '
+*/

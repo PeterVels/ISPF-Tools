@@ -1,0 +1,24 @@
+/* Rexx to demonstrate a progress bar */
+black = '09'x
+blue  = '08'x
+white = '03'x
+block = '9F'x
+progressBar = 60
+totalFiles = 1020
+address ISPEXEC
+call syscalls 'ON'
+thisFile# = 5
+do while thisFile# <= totalFiles
+  thisFile# = thisFile# + random(50,100)  /* fudge some progress */
+  if thisFile# > totalFiles then leave
+  'control display lock'
+  percentage = trunc(100 * thisFile# / totalFiles)
+  #blocks = trunc(progressBar * percentage / 100)
+  dynvar = blue || copies(block,#blocks) ,
+           thisFile# ,
+           white || percentage'%' || black
+  'display panel(progress)'
+  ADDRESS SYSCALL "sleep" 1 /* fudge some wait time */
+end
+call syscalls 'OFF'
+exit

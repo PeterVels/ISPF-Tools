@@ -1,0 +1,26 @@
+)ATTR DEFAULT(~+_)
+   ~  TYPE(TEXT)  INTENS(HIGH) SKIP(ON)
+   +  TYPE(TEXT)  INTENS(LOW)  SKIP(ON) COLOR(GREEN)
+   _  TYPE(INPUT) INTENS(HIGH) CAPS(ON) JUST(LEFT) HILITE(USCORE)
+)BODY EXPAND(\\)
+~Tutorial+\-\(~CPUCPT - CPU Percentage Utilization+)\-\~Tutorial
+~Command ===>_ZCMD
++
++ ~CPUPCT+displays the lpar's CPU utilization and jobs using the most CPU.
++
++  This utility uses SDSF Display Active (DA) screen to obtain the data.
++
++  The jobs using the most CPU are listed at the bottom of the screen
++  by lpar, as many as can fit on the screen.  Pressing ENTER will
++  refresh the data.
++
++  To display a particular lpar's job utilization, type in the lpar
++  name on the primary command line, and to re-display all lpar's jobs,
++  blank out the primary command.
++
++  Also, if the job is using ZIIP engines, the percentage will be
++  displayed to the far right of job information.
+)PROC
+  &ZUP     = #CPUPCT
+  &ZCONT   = #CPUPCT
+)END

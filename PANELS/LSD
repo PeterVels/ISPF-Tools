@@ -1,0 +1,35 @@
+)Attr Default(%_)
+  _ type(input)   caps(on) color(green)    hilite(uscore)
+  { type(text)    skip(on) color(yellow)
+  \ type(text)    skip(on) color(blue)
+  $ type(output)  skip(on) color(yellow) caps(off)
+  ! type(output)  skip(on) color(turquoise)
+)BODY
+        {Pounds Shillings and Pence Change Calculator
+{
+{ Date: 13th Feburary 1966   Time:!ztime
+{
+{  ::::::::  :::    :::  ::::::::  :::::::::  :::::::::  ::::::::::
+{ :+:    :+: :+:    :+: :+:    :+: :+:    :+: :+:    :+: :+:
+{ +:+        +:+    +:+ +:+    +:+ +:+    +:+ +:+    +:+ +:+
+{ +#++:++#++ +#++:++#++ +#+    +:+ +#++:++#+  +#++:++#+  +#++:++#
+{        +#+ +#+    +#+ +#+    +#+ +#+        +#+        +#+
+{ #+#    #+# #+#    #+# #+#    #+# #+#        #+#        #+#
+{  ########  ###    ###  ########  ###        ###        ##########
+{
+$msg
+{
+\Total price:{Pounds:_z{Shillings:_z {Pence:_z {
+\Tendered   :{Pounds:_z{Shillings:_z {Pence:_z {
+{
+\Change     :{Pounds:!z{Shillings:!z {Pence:!z {
+)INIT
+ .ZVARS = '(pl, ps, pd, tl, ts, td, cl, cs, cd)'
+)PROC
+ ver(&pl,NUM)
+ ver(&ps,RANGE,0,19)
+ ver(&pd,RANGE,0,11)
+ ver(&tl,NUM)
+ ver(&ts,RANGE,0,19)
+ ver(&td,RANGE,0,11)
+)END

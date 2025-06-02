@@ -1,0 +1,21 @@
+)ATTR
+ _  TYPE(INPUT) INTENS(LOW)  HILITE(USCORE) CAPS(ON) JUST(LEFT)
+ +  TYPE(TEXT)  INTENS(LOW)  SKIP(ON)
+ }  TYPE(OUTPUT)   COLOR(RED)
+)BODY EXPAND(\\)
+\-\DUNNITSYS\-\
+%Command+===>_ZCMD                                          +_SCRL%PF3+to Quit
+}msg
+)MODEL
+_i1      +_i2      +_i3      +_i4      +_i5      +_i6      +_i7      +_i8      +
+)INIT
+)PROC
+ VER(&I1,DSNAMEF)
+ VER(&I2,DSNAMEF)
+ VER(&I3,DSNAMEF)
+ VER(&I4,DSNAMEF)
+ VER(&I5,DSNAMEF)
+ VER(&I6,DSNAMEF)
+ VER(&I7,DSNAMEF)
+ VER(&I8,DSNAMEF)
+)END

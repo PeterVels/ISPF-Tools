@@ -1,0 +1,18 @@
+/*  Rexx to create an org chart of the RACF group hierarchy
++----1----+----2-...100...--+----6----+----7
+0503 ALLUSER                  GCICSTRN CMAC
+type ResGroup                          member
+*/
+address TSO
+"execio * diskR topin  (finis"  /* FB 80     */
+"execio * diskW topout (finis"  /* VB 1000   */
+"execio * diskR botin  (finis"  /* FB 80     */
+"execio * diskW botout (finis"  /* VB 1000   */
+"execio * diskR infileM (stem in. finis"
+resgroup. = ''
+do i = 1 to in.0
+ parse var in.i type XResGroup XGroupResourceName member .
+ html.i = "["member", "Xresgroup" ,'GCICSTRN'],"
+end
+"execio * diskW outfileM (stem html. finis)"
+exit

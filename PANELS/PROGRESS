@@ -1,0 +1,18 @@
+)ATTR DEFAULT(ý+_)
+   $ area(dynamic) scroll(on) extend(on)
+ + type(text)   caps(off) skip(on)
+ \ type(output) intens(non)
+03 type(dataout) intens(low) color(white)      hilite(reverse)
+08 type(dataout) intens(low) color(blue)
+09 type(dataout) intens(non) color(blue)
+
+)BODY
++
++
++
++
+$dynvar                                                                        $
++
+)INIT
+)PROC
+)END

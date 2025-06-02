@@ -1,0 +1,22 @@
+)ATTR
+ _ type(input)  caps(on)  color(green) hilite(uscore)
+ + type(text)   caps(off) skip(on)
+ \ type(output) color(yellow)
+ @ type(output) caps(off) color(white)
+ $ type(output) color(pink)
+ { type(output) color(white) skip(on)
+ } type(output) color(red)   skip(on)
+)BODY
+       @ztime    +RACF User Information
++Command ===>_zcmd                                               +Scroll==>_z
+@msg
++User:_user    +
+)MODEL
+$group   @class    }z\profile
+)INIT
+ .zvars = '(scrl access)'
+ .cursor = user
+ &ZTDMARK = ''
+)PROC
+ ver(&user,NB)
+)END

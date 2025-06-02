@@ -1,0 +1,88 @@
+/* Rexx to create a silver Barnesley Fern sideways*/
+address ISPEXEC
+'vget (zscreenw zscreend)'
+width  = zscreenw - 2 /* fixes "ISPF screen input error - code = 28" error */
+if width < 80 then width = 80 /* still a problem with 24x80 :-( */
+height = zscreend
+lrecl = width * height
+shadow = copies(' ',width * height)
+address TSO
+fernfile = "'USER01.FERNFILE.L"lrecl"'"
+rv = sysdsn(fernfile)
+if rv = 'OK' then
+ disp = 'shr'
+else if rv = 'DATASET NOT FOUND' then
+ disp= "new catalog lrecl("lrecl") blksize("lrecl" ) tr sp(1 1) vol(user01)"
+"alloc fi(fernfile) da("fernfile")" disp
+if disp = 'shr' then
+ do
+  "execio * diskR fernfile (stem in. finis)"
+  dynvar = in.1
+  shadow = in.2
+ end
+else
+ do
+  address ISPEXEC
+  dynvar = copies(' ',width * height)
+  x = 0
+  y = 0
+  colour = ' '
+  chars = '!@#$%^{'
+  do i = 1 to 5000
+   call nextPoint
+   call drawPoint
+   if i // 500 = 1 then
+    do
+     'control display lock'
+     'display panel(fern)'
+    end
+  end
+  dynvar = overlay(':-)',dynvar,1)
+  queue dynvar
+  queue shadow
+  address TSO "execio 2 diskW fernfile (finis)"
+ end
+address ISPEXEC 'display panel(fern)'
+address TSO "free fi(fernfile"
+exit
+
+drawPoint:
+  py = map(x, -2.1820, 2.6558, 0, height)
+  px = map(y, 0,       9.9830, 0, width )
+  offset = width * trunc(py+0.5) + trunc(px+0.5)
+/*shadow = overlay('@',shadow,offset)*/
+  shadow = overlay(substr(chars,i // 7 + 1,1),shadow,offset)
+  dynvar = overlay('AF'x,dynvar,offset)
+return
+
+nextPoint:
+  r = random(100)
+  select
+   when r < 1 then
+   do
+    nextX = 0
+    nextY = 0.16 * y
+   end
+  when r < 86 then
+   do
+    nextX = ( 0.85 * x) + (0.04 * y)
+    nextY = (-0.04 * x) + (0.85 * y) + 1.6
+   end
+  when r < 93 then
+   do
+    nextX = ( 0.2 * x) - (0.26 * y)
+    nextY = (0.23 * x) + (0.22 * y) + 1.6
+   end
+  otherwise
+   do
+    nextX = (-0.15 * x) + (0.28 * y)
+    nextY = ( 0.26 * x) + (0.24 * y) + 0.44
+   end
+  end
+  x = nextX
+  y = nextY
+return
+
+map:
+arg a, b, c, d, e
+return (a - b) / (c - b) * (e - d) + d

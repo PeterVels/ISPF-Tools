@@ -1,0 +1,45 @@
+/* Rexx to invoke edit macro IEE252I to display PARMLIB members
+
+   Usage: Use as a line comand in ISPF 3.4 for saved SYSLOG data sets
+             e.g. PL 'SYS6.SYSLOGD.MVPQ.G3991V00'
+             e.g. PL 'SYS6.SYSLOGD.MVDG.G3971V00'
+*/
+/* These are hard-coded offsets which vary from site to site. */
+/* You will also need to customise REXX IEE252I. */
+
+offset1 = 62
+offset2 = offset1 + 8
+arg syslog
+
+/* First task is to trim down the data set to something more
+   manageable, otherwise it's not possible to view it */
+
+"alloc fi(sortin) da("syslog") shr"
+sortout = 'sortout.d' || random(99999)
+"alloc fi(sortout) new catalog tr sp(1 1) da("sortout")"
+"alloc fi(sysout) da(*) reuse"
+queue " OPTION COPY,VLSCMP"
+
+queue " OUTFIL INCLUDE=("offset1",7,CH,EQ,C'IEE252I',OR,"
+queue "                 "offset1",7,CH,EQ,C'IEA371I',OR,"
+queue "                 "offset1",7,CH,EQ,C'IEA007I',OR,"
+queue "                 "offset2",1,CH,EQ,C'&')"
+queue ""
+"alloc f(sysin) new delete reuse space(1) tr unit(vio) lrecl(80)"
+/* Hide SORT messages */
+"alloc f(sysout)   new delete reuse space(1) tr unit(vio) lrecl(255)"
+"alloc f(sysprint) new delete reuse space(1) tr unit(vio) lrecl(255)"
+"execio * diskw sysin (finis)"
+ADDRESS ATTCHMVS "SORT"
+"execio * diskr sortout (stem in. finis)"
+"free fi(sortin sortout sysin)"
+
+/* Ready to view and process it... */
+
+address ISPEXEC "view dataset("sortout") macro(iee252i)"
+shhh = msg('OFF')
+"delete" sortout
+shhh = msg('ON')
+"alloc fi(sysout) da(*) reuse"
+"alloc fi(sysprint) da(*) reuse"
+exit

@@ -1,0 +1,11 @@
+/* Rexx to delete blank lines */
+address ISREDIT
+'macro () NOPROCESS'
+'(zlast) = linenum .zlast'
+do i = 1 to zlast
+ '(linedata) = line' i
+ if strip(linedata) = '' then
+   'XSTATUS' i '= X'
+end
+'del all x'
+exit

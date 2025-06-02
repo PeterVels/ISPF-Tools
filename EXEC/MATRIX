@@ -1,0 +1,28 @@
+/* Rexx to move matrix characters down the screen */
+address ISPEXEC
+
+lines = 55
+do i = 1 to lines
+ line = copies('b',79)
+ do 99
+  rnd_79 = random(1,78)
+  line = left(line,rnd_79-1) || 'g' || right(line,79 - rnd_79 -1)
+ end
+ interpret "s"i "= line"
+end
+
+/*
+DSN = 'USER02.PROD.LOAD'
+"ISPEXEC LIBDEF ISPLLIB DATASET ID('"DSN"')"
+*/
+do lines
+   'control display lock'
+   'display panel(matrix)'
+   do j = lines to 1 by -1
+    interpret "s"j "= s"j-1
+   end
+   s1  = s55
+/* P1 = '00000001'
+   ADDRESS LINKPGM 'TDELAY P1' */
+end
+exit

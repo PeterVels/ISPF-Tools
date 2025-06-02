@@ -1,0 +1,119 @@
+/* REXX */
+/*--------------------------------------------------------------------*/
+/* PVSTMTNX */
+/* written: Peter Vels 6/10/2016
+
+   This exec starts from each unexcluded line and shows all the lines
+   between the start point (the unexcluded line) and the end point
+   as defined by the search string specified in parm 1
+
+   Note that a semicolon can be specified as the word semi
+
+   The search will be done "U"p or "D"own as specified in parm 2
+   If not specified the second parameter defaults to "D"
+
+   eg x all; f all create; pvstmtnx semi
+   eg x all; f all space=(;pvstmtnx dsn= U
+*/
+debug = 0
+address ISREDIT
+'macro (p1 p2) NOPROCESS'
+"reset label"
+"(lastline) = linenum .zlast"
+row = 1; col = 0
+'CURSOR = (row,col)'
+if debug then
+ do
+  '(dsn) = dataset'
+  '(mem) = member'
+  '(l c) = cursor'
+  say 'lastline:' lastline
+  say 'dataset:' dsn
+  say 'member:' mem
+  say 'line:' l
+  say 'column:' c
+ end
+call validate_input
+do forever
+ "f p'=' nx"
+ if rc <> 0 then
+  leave
+ '(linedata) = line .zcsr'
+ if debug then say 'Found something here:' left(linedata,40) '...'
+ "label .zcsr = .here"
+ if rc <> 0 & rc <> 8 then
+  do
+   say 'Something went wrong trying to LABEL a line (1)'
+   exit 8
+  end
+ magic
+ if rc <> 0 then
+  iterate
+ '(linedata) = line .zcsr'
+ if debug then say 'Found something there:' left(linedata,40) '...'
+ "label .zcsr = .there"
+ if rc <> 0 & rc <> 8 then
+  do
+   say 'Something went wrong trying to LABEL a line (2)'
+   exit 8
+  end
+ if p2 = 'D' then
+  do
+   "reset excluded .here .there"
+   "cursor = .there"
+  end
+ else
+  do
+   "reset excluded .there .here"
+   "cursor = .here"
+  end
+ "(row col) = cursor"
+ row = row + 1
+ if row <= lastline then
+  "cursor =" row "1"
+ else
+  do
+   if debug then
+     say 'Tried to position cursor beyond the end of the file...quitting'
+   "reset label"
+   leave
+  end
+ "reset label"
+ bargraph = row * 60 % lastline
+ dynvar = copies('-',bargraph) trunc(bargraph / 0.6,0) '%'
+ address ISPEXEC
+ 'control display lock'
+ 'display panel(waitdyn)'
+ address ISREDIT
+end
+'reset find'
+'up m'
+exit
+
+validate_input:
+p2 = translate(p2)
+if p2 = '' then
+ p2 = 'D'
+if length(p2) > 1 then
+ p2 = left(p2,1)
+if pos(p2,'U D') = 0 then
+ do
+  say "Second parameter must be either 'Up' or 'Down' (U/D)"
+  exit 1
+ end
+if p2 = 'U' then
+ do
+  finddir = 'prev'
+  direction = 'before'
+ end
+else
+ do
+  finddir = 'next'
+  direction = 'after'
+ end
+if translate(p1) = 'SEMI' then
+ magic = "f '5E'x" finddir
+else
+ magic = "f '"p1"'" finddir
+#finds = 0
+return

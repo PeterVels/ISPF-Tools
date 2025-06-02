@@ -1,0 +1,6 @@
+/* Rexx to list certificates and keyrings for a user */
+arg user
+if user = '' then user = userid()
+"racdcert list id("user")"
+"racdcert listr(*) id("user")"
+exit

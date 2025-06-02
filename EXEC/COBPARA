@@ -1,0 +1,18 @@
+/* Rexx edit macro to insert a display after each paragraph or section
+   in a COBOL program so that when debugging it's easier
+   to see where you are */
+address ISREDIT
+"macro () NOPROCESS"
+"f PROCEDURE 8 first"
+do forever
+  "f p'^' 8"
+  if rc <> 0 then leave
+  "(l c) = cursor"
+  "(linedata) = line" l
+  if linedata <> 'EJECT' then
+   do
+    display = "           DISPLAY '"strip(linedata)"'"
+    "line_after" l "= (display)"
+   end
+end
+exit

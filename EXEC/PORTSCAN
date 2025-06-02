@@ -1,0 +1,129 @@
+/* REXX */
+signal on halt
+signal on novalue
+
+/* Set error code values                                              */
+initialized = 0
+msg = ''; ip = ''
+
+address ISPEXEC
+'vget (pstarget psports psErrors) profile'
+'tbcreate portscan names(port rv result) nowrite replace'
+do forever
+ if msg = '' then msg = ip
+ 'tbtop   portscan'
+ 'tbdispl portscan panel(portscan)'
+ if rc < 5 then
+  call mainline
+ else
+  leave
+end
+'vput (pstarget psports psErrors) profile'
+exit
+
+mainline:
+/* reinitialision */
+'tbcreate portscan names(port rv result) nowrite replace'
+portlist = ''
+msg = ''
+showErrors = (translate(psErrors) = 'Y')
+
+/* Acceptable input is a list of ports, including ranges */
+/* e.g. 21,80,8080-8084 */
+psports = translate(psports,' ',',') /* convert any commas to spaces */
+do i = 1 to words(psports)
+ this = word(psports,i)
+ if datatype(this) = 'NUM' then
+  portlist = portlist this
+ else
+  do
+   if pos('-',this) > 0 then
+    do
+     parse var this lower'-'upper
+     do j = lower to upper
+      portlist = portlist j
+     end
+    end
+  end
+end
+junk = time('E')
+
+/* define a socket set */
+call Socket 'Initialize', 'PortScan'
+if rv=0 then initialized = 1
+else call error 'E', 200, 'Unable to initialize SOCKET'
+
+nodots = space(translate(pstarget,' ','.'),0)
+if datatype(nodots) = 'NUM' then
+ ip = pstarget
+else
+ ip = Socket('GetHostByName', pstarget)
+
+do p = 1 to words(portlist)
+ port = word(portlist,p)
+
+ /* Create a socket in the active socket set */
+ s = Socket('Socket')
+ if rv <> 0 then call error 'E', 32, 'SOCKET(SOCKET) rc='rv
+
+ /* src = socket("FCNTL",s,"F_SETFL","NON-BLOCKING") */
+
+ /* Establish a connection between two stream sockets */
+ call Socket 'Connect', s, 'AF_INET' port pstarget
+ if result = '' then result = 'Open'
+ if rv = 0 | (rv <> 0 & showErrors) then
+  'tbadd portscan'
+
+ /* Shut down a socket and free the resources allocated to it */
+ call Socket 'Close', s
+ if time('E') > 60 then
+  do
+   say 'Timing out at port' port
+   leave
+  end
+
+end
+
+ /* Close all the sockets in a socket set and release the socket set */
+ call Socket 'Terminate'
+elapsed = time('E')
+return
+
+/* Calling the real SOCKET function                                   */
+socket: procedure expose rv
+  a0 = arg(1)
+  a1 = arg(2)
+  a2 = arg(3)
+  a3 = arg(4)
+  a4 = arg(5)
+  a5 = arg(6)
+  a6 = arg(7)
+  a7 = arg(8)
+  a8 = arg(9)
+  a9 = arg(10)
+  parse value 'SOCKET'(a0,a1,a2,a3,a4,a5,a6,a7,a8,a9) with rv result
+return result
+
+/* Halt processing routine                                            */
+halt:
+  call error 'E', 4, '==> REXX Interrupted'
+return
+
+/* Error message and exit routine                                     */
+error:
+  type = arg(1)
+  retc = arg(2)
+  text = arg(3)
+  ecretc = right(retc,3,'0')
+  ectype = translate(type)
+  ecfull = 'RXSCLI' || ecretc || ectype
+  say '===> Error:' ecfull text
+  if type <> 'E' then return
+  if initialized
+     then do
+       parse value Socket('SocketSetStatus') with . status severreason
+       if status <> 'Connected'
+          then say 'The status of the socket set is' status severreason
+     end
+  call Socket 'Terminate'
+return

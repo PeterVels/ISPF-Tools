@@ -1,0 +1,12 @@
+)ATTR
+* AREA(DYNAMIC)
+$ TYPE(CHAR) HILITE(REVERSE) COLOR(YELLOW)
+> TYPE(CHAR) COLOR(RED)
+# TYPE(CHAR) COLOR(BLUE) HILITE(USCORE)
+Á TYPE(DATAOUT) INTENS(LOW) COLOR(pink)
+)BODY
+%-------------------CHARACTER ATTRIBUTE PANEL------------------------
+%COMMAND ===>_ZCMD
++The following will contain character attributes:
+*CATTAREA,SHADOW -----------------------------------------------*
+)END

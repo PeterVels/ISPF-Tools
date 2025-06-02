@@ -1,0 +1,5 @@
+/* REXX to invoke File Manager directly
+   Actions supported are: Browse, View and Edit  */
+arg dsn action
+if action = '' then action = 'v'
+"FMNINV DS"translate(left(action,1)) dsn

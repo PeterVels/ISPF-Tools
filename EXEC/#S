@@ -1,0 +1,24 @@
+/* Rexx edit macro to detect the existence of data sets in JCL */
+address ISREDIT
+"macro () NOPROCESS"
+"(zlast) = linenum .zlast"
+do i = 1 to zlast
+ "(linedata) = line" i
+ if left(linedata,3) = '//*' then iterate
+ parse var linedata 'DSN=' dsn ',' .
+ parse var dsn dsn .
+ dsn = strip(dsn)
+ if dsn <> '' & left(dsn,1) <> '&' then
+  do
+   address ISPEXEC "VSYM (dsn)"
+   msg = sysdsn("'"dsn"'")
+   if msg = 'OK' then
+    type = 'noteline'
+   else
+    type = 'infoline'
+   note = dsn sysdsn("'"dsn"'")
+   "line_after" i "=" type "(note)"
+   zlast = zlast + 1
+  end
+end
+exit

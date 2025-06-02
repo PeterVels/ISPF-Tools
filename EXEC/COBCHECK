@@ -1,0 +1,49 @@
+/* REXX to check for IF and END-IF in a COBOL program */
+address ISREDIT
+'macro (parm) NOPROCESS'
+in_procedure_division = 0
+#IFs    = 0
+IFlevel = 0
+#ENDIFs = 0
+rv      = 0
+'(zlast) = linenum .zlast'
+do i = 1 to zlast
+ '(linedata) = line' i
+ if substr(linedata,7,1) = '*' then iterate
+ linedata = translate(linedata)
+ if in_procedure_division then
+  do
+   if pos(' IF ',linedata) > 12 then
+    do
+     #IFs = #IFs + 1
+     IFlevel = IFlevel + 1
+    end
+   if pos(' END-IF ',linedata) > 12 then
+    do
+     #ENDIFs = #ENDIFs + 1
+     IFlevel = IFlevel - 1
+     if IFlevel < 0 then
+      do
+       message = '*** More END-IFs than IFs!'
+       'line_after' i '= msgline (message)'
+      end
+    end
+   if IFlevel <> 0 then
+    do
+     newline = right(IFlevel,6) || substr(linedata,7)
+     'line' i '= (newline)'
+    end
+  end
+ else
+  if pos('PROCEDURE DIVISION',linedata) > 7 then
+   in_procedure_division = 1
+end
+say 'IFs    ' #IFs
+say 'ENDFSs ' #ENDIFs
+if IFlevel <> 0 then
+ do
+  message = 'Unbalanced IFs and ENDIFs!'
+  'line_after 0 = msgline (message)'
+  rv = 12
+ end
+exit rv

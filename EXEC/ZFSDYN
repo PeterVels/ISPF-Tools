@@ -1,0 +1,144 @@
+/* Rexx to report on zFS space */
+signal on novalue
+red = '01'x ; yellow = '02'x ; white = '03'x ; green = '04'x ; turq = '05'x
+red_no_highlight = '06'x; green_no_highlight = '07'x ; blue = '08'x
+top_line# = 1; dsn# = 0;
+rebuild_panel = 1; pfkey = 'ENTER'
+virgin = 1
+panel_width = 132
+address ISPEXEC
+"vget (zscreend)"
+msg = ''
+do forever
+ address ISPEXEC
+ call build_dynamic_area
+ "display PANEL(zfsdyn)"
+ if rc <> 0 then leave
+/* Handle scrolling */
+ rebuild_panel = 0
+ select
+ when pfkey = 'PF07' then
+  if top_line# = 1 then
+   msg = 'Already at the top'
+  else
+   do
+    top_line# = top_line# - (ZSCREEND - 6)
+    if top_line# < 1 then
+     top_line# = 1
+    msg = ''
+   end
+ when pfkey = 'PF08' then
+    do
+     top_line# = top_line# + (ZSCREEND - 6)
+     if top_line# > (dsn# * panel_width) then
+      msg = 'No more lines to display'
+     else
+      msg = ''
+    end
+ otherwise
+   rebuild_panel = 1
+ end
+end
+exit
+
+build_dynamic_area:
+if rebuild_panel = 1 then do
+ "control display lock"
+ "display panel(wait)"
+ call perform_omvs_stuff
+ call build_panel
+ end
+rebuild_panel = 0
+dsn# = 0
+dsn. = ''
+dynvar = ''
+do i = 1 to in.0
+ dynvar = dynvar || left(in.i,panel_width)
+ dsn# = dsn# + 1
+ dsn.dsn# = strip(substr(in.i,8,25))
+end
+if top_line# <> 1 then
+ dynvar = substr(dynvar,1 + (panel_width * top_line#))
+dynvar = dynvar || blue || copies('-',32) 'Bottom of data' copies('-',31)
+return
+
+build_panel:
+do i = 2 to aggrinfo.0
+ parse var aggrinfo.i dsn '(' . '):' Kfree 'K free out of total' Ktotal
+ PercentFree = 100 * Kfree / Ktotal
+ PercentFull = 100 - PercentFree
+ pfree = format(PercentFree,3,2)
+ pfull = format(PercentFull,3,2)
+ Kfull = Ktotal - Kfree
+ gchar = ' '
+ do d = 1 to dfv.0
+  if word(dfv.d,2) = '('strip(dsn)')' then do
+   mp = word(dfv.d,1)
+   leave d
+  end
+ end
+ barchart = copies(gchar,trunc(29 * Kfull / Ktotal)) || turq
+ Ktotal = right(strip(Ktotal),8)
+ is_RO = pos('(R/O',aggrinfo.i) > 0
+ if is_RO then kala = blue
+ else          kala = turq
+ panel_line = kala || left(dsn,31) || turq || Ktotal || turq || pfull
+ right_bit = left(barchart,31) mp
+ select
+  when PercentFree < 10 then
+    panel_line = panel_line  red    || right_bit
+  when PercentFree < 20 then
+    panel_line = panel_line  yellow || right_bit
+  when PercentFree < 30 then
+    panel_line = panel_line  white  || right_bit
+  otherwise
+    panel_line = panel_line  green  || right_bit
+ end
+ queue left(panel_line,panel_width)
+end
+queue ''
+/*---------------------------------------Start SORT----------------*/
+address TSO
+"alloc fi(sortin)  new delete tr sp(1 1) lrecl("panel_width")"
+"execio * diskw sortin (finis)"
+"alloc fi(sortout) new delete tr sp(1 1)"
+"alloc fi(sysout) new delete reuse space(1) tr unit(vio)"
+direction = 'D'
+if \virgin then
+ address ISPEXEC "vget (zscreenc)"
+else
+ zscreenc = 999
+virgin = 0
+cursor_position = zscreenc + 0
+select
+ when cursor_position > 396 & cursor_position < 430 then
+  do
+   sortvar = '2,31' /* dsn */
+   direction = 'A'
+   msg = 'sorted by DSN'
+  end
+ when cursor_position > 429 & cursor_position < 437 then do
+   sortvar = '35,5' /* total */
+   msg = 'sorted by Total'
+  end
+ otherwise do
+   sortvar = '44,6' /* % full */
+   msg = 'sorted by %Full'
+  end
+end
+queue ' SORT FIELDS('sortvar',CH,'direction')'
+queue ''
+"alloc f(sysin) new delete reuse space(1) tr unit(vio) lrecl(80)"
+"execio * diskw sysin (finis)"
+ADDRESS ATTCHMVS "SORT"
+"execio * diskr sortout (stem in. finis)"
+"free fi(sortin sortout sysin)"
+/*---------------------------------------End SORT------------------*/
+return
+
+perform_omvs_stuff:
+signal off novalue
+call bpxwunix 'zfsadm aggrinfo',,aggrinfo.
+call bpxwunix 'df -v',,dfv.
+signal on novalue
+return
