@@ -29,3 +29,5 @@
 *.obj binary
 *.bin binary
 *.tiff binary
+ALLOCDJ.PNG git-encoding=BINARY binary
+ALLOCDP.PNG git-encoding=BINARY binary
