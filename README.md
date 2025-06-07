@@ -10,7 +10,8 @@ Happy to accept pull requests to improve the code and fix bugs.
 ### ALLOCD Instructions ###
 
 Submit a job, for example:
-![JCL]allocdj.png
+
+![JCL](ALLOCDJ.png)
 
 In SDSF
 
@@ -33,4 +34,4 @@ Examples
 Once the data sets and UNIX files are listed, position the cursor
 on the item you wish to examine then hit ENTER to browse or F10 to view.
 
-![Panel]allocdp.png
+![Panel](ALLOCDP.png)
