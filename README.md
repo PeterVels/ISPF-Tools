@@ -41,3 +41,11 @@ Once the data sets and UNIX files are listed, position the cursor
 on the item you wish to examine then hit ENTER to browse or F10 to view.
 
 ![Panel](ALLOCDP.png)
+
+### PORTSCAN Instructions ###
+
+Type `TSO PORTSCAN`
+
+Enter values for Hostname or IP address and Ports and either Y or N in `Show error lines?` then hit enter.
+
+![Panel](PORTSCAN.panel.png)
