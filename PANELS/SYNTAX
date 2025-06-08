@@ -7,7 +7,7 @@
 %Command ===>_ZCMD                                                             +
 +
 + CICS? _z+   (Y/N)  CICS load library:_cicsload                               +
-+ DB2?  _z+   (Y/N)               @e.g. DFH540.CICS.SDFHLOAD
++ DB2?  _z+   (Y/N)               @e.g. DFH610.CICS.SDFHLOAD
 + View compiler listing?   _z+   (Y/N)
 +
 + Enter COPYBOOK libraries

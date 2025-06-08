@@ -16,7 +16,7 @@ address ISPEXEC
       "pvsynd2 pvsynd3 pvsynd4 pvsynd5 pvsynd6 cics db2 viewlist) PROFILE"
 if show <> '' then
  do
-  'display panel(pvsyntax)'
+  'display panel(syntax)'
   if rc <> 0 then
    exit 0
   "vput (cicsload pvsyns1 pvsyns2 pvsyns3 pvsyns4 pvsyns5 pvsyns6 pvsynd1",

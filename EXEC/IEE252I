@@ -6,12 +6,10 @@ Usage:  View SYSLOG somehow. Issue command IEE252I. Enjoy.
 Author: Peter Vels 18 Apr 2012
 
 */
-offset = 66 /* <--- you might need to modify this */
-offset2 = offset + 1
 "delstack"
 address ISREDIT
-"macro (nothing) NOPROCESS"
-"f iea371i last" /* Find last IPL */
+"macro () NOPROCESS"
+"f 'IEA371I' last" /* Find last IPL */
 if rc <> 0 then
  do
   say 'No IPL in this SYSLOG'
@@ -69,7 +67,7 @@ address ISREDIT
 exit
 
 disptabl:
-arg table
+arg Table
 "TBTOP" Table
 "TBDISPL" Table "PANEL("Table")"
 drc = RC
@@ -83,16 +81,26 @@ address ISPEXEC
 "tbcreate symtabl keys(symword) names(symval) nowrite"
 address ISREDIT
 "f 'IEA007I STATIC SYSTEM SYMBOL VALUES' last"
+"(l c) = CURSOR"
+"(dataset) = dataset"
+"(member) = member"
+"(symline) = line .zcsr"
+parse var symline 'IEA007I STATIC SYSTEM SYMBOL VALUES' msgnum .
 rv = 0
-do while rv = 0
- "f &" offset
+do while rv = 0 & pos(msgnum,symline) > 0
+ "f '&'"
  rv = rc
  if rv = 0 then
   do
    "(symline) = line .zcsr"
-   parse var symline (offset2) symword '.' '= "' symval '"'
+   parse var symline '&'symword'.' '= "' symval '"'
    address ISPEXEC "tbadd symtabl"
-   if rc <> 0 then say 'TBADD failure in IEE252I'
+   if rc <> 0 then
+    do
+     say 'TBADD failure in IEE252I edit macro. RC' rc
+     if rc = 8 then
+      Say 'A row with the same key ('symword') already exists'
+    end
   end
 end
 return

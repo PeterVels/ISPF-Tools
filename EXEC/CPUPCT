@@ -10,7 +10,7 @@
 /* @A0  210218  S915460  Obtained REXX/panel from CBT1001 (PVCPUPCT)   */
 /*=====================================================================*/
 /* Original code by Peter Vels, Canberra ~ 2016                        */
-/* Neatened and genrally improved by Bruce Koss at Wells Fargo in 2021 */
+/* Improved by Bruce Koss at Wells Fargo in 2021                       */
 
 arg batch
 /* signal on novalue */

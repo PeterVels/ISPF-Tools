@@ -1,0 +1,52 @@
+/* Rexx edit macro to resolve system symbols using a static table */
+/* Assumes table symtabl is already open */
+address ISREDIT
+"macro (nothing) NOPROCESS"
+"(zlast) = linenum .zl"
+symenders = ' =.,()"' || "'"
+do line# = 1 to zlast           /* for each line of the member */
+ sym# = 0
+ sym. = ''
+ "(linedata) = line" line#
+ do char# = 1 to 77
+  if substr(linedata,char#,1) = '&' then /* possible symbol start */
+   do
+    candidate = substr(linedata,char#+1)
+    do i = 3 to length(candidate) /* symend can't be the 1st or 2nd */
+     symend = pos(substr(candidate,i,1),symenders)
+     if symend > 0 then /* found ending character for symbol */
+      do
+       symword = substr(candidate,1,i-1) /* the REAL candidate */
+       address ispexec "tbtop  symtabl"
+       address ispexec "tbscan symtabl arglist(symword)"
+       if rc = 0 then         /* If we find the symbol in the table */
+        do
+         sym# = sym# + 1
+         sym.sym#.word   = symword
+         sym.sym#.value  = symval
+         sym.sym#.endch  = substr(candidate,i,1) /* might be a dot */
+        end
+       i = length(candidate) + 1 /* Found, so skip to the end */
+       char# = char# + length(symword) + 1
+      end /* found the end of the symbol */
+    end /* each character in the candidate symbol */
+   end /* found an & */
+ end /* each character in the line */
+ if sym# > 0 then
+  do
+   do i = 1 to sym# /* substitute each symbol with its value */
+    string = linedata
+    needle = '&'sym.i.word /* Don't die on CLOCK=&CLOCK, line */
+    n = pos(needle,linedata)     /* clobber the & as well */
+    len = length(sym.i.word) + 1
+    if sym.i.endch = '.' then len = len + 1 /* & the dot, if present */
+    linedata = delstr(string,n,len)
+    new = sym.i.value
+    target = linedata
+    n = n - 1
+    len = length(sym.i.value)
+    linedata = insert(new,target,n,len)
+   end
+   "line_after" line# "= NOTELINE (linedata)"
+  end
+end /* each line# */

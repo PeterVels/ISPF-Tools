@@ -1,0 +1,12 @@
+)ATTR DEFAULT({+_)
+ + type(text)   caps(off) skip(on)
+ # type(output) caps(off) skip(on)
+ \ type(output) intens(non)
+ @ type(text) intens(low) color(pink) caps(off) skip(on)
+)BODY WINDOW(40,5)
++
++ #note
++
+)INIT
+)PROC
+)END

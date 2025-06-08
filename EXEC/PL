@@ -4,26 +4,23 @@
              e.g. PL 'SYS6.SYSLOGD.MVPQ.G3991V00'
              e.g. PL 'SYS6.SYSLOGD.MVDG.G3971V00'
 */
-/* These are hard-coded offsets which vary from site to site. */
-/* You will also need to customise REXX IEE252I. */
 
-offset1 = 62
-offset2 = offset1 + 8
+offset = 62
 arg syslog
 
 /* First task is to trim down the data set to something more
    manageable, otherwise it's not possible to view it */
 
 "alloc fi(sortin) da("syslog") shr"
-sortout = 'sortout.d' || random(99999)
-"alloc fi(sortout) new catalog tr sp(1 1) da("sortout")"
+sortout = userid()".sortout.d" || random(99999)
+"alloc fi(sortout) new catalog tr sp(1 1) da('"sortout"')"
 "alloc fi(sysout) da(*) reuse"
 queue " OPTION COPY,VLSCMP"
 
-queue " OUTFIL INCLUDE=("offset1",7,CH,EQ,C'IEE252I',OR,"
-queue "                 "offset1",7,CH,EQ,C'IEA371I',OR,"
-queue "                 "offset1",7,CH,EQ,C'IEA007I',OR,"
-queue "                 "offset2",1,CH,EQ,C'&')"
+queue " OUTFIL INCLUDE=("offset",7,CH,EQ,C'IEE252I',OR,"
+queue "                 "offset",7,CH,EQ,C'IEA371I',OR,"
+queue "                 "offset",7,CH,EQ,C'IEA007I',OR,"
+queue "                        55,9,SS,EQ,C'&')"
 queue ""
 "alloc f(sysin) new delete reuse space(1) tr unit(vio) lrecl(80)"
 /* Hide SORT messages */
