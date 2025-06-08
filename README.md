@@ -11,7 +11,18 @@ This is a work-in-progress.  Please report all errors and omissions. If you need
 
 A huge thanks to Lionel Dyck for being such an inspiration.
 
-### PVJCL Instructions ###
+### PVJCL ###
+
+## Function ##
+
+Ever had to maintain someone else's JCL?  Find it daunting when there are a lot of steps?  PVJCL to the rescue! This edit macro will display the
+member you are editing or viewing in a way that is easier to understand.  Essentially, it gives you an overview.
+
+## Known limitations ##
+
+It does not expand PROCs.
+
+## Instructions for use ##
 
 Edit or view some JCL, e.g. **SYS1.SAMPLIB(TESTEXIT)**. Enter `PVJCL` as a primary command
 
@@ -19,7 +30,14 @@ Edit or view some JCL, e.g. **SYS1.SAMPLIB(TESTEXIT)**. Enter `PVJCL` as a prima
 
 ![Panel](images/PVJCL.panel.png)
 
-### ALLOCD Instructions ###
+### ALLOCD ###
+
+## Function ##
+
+Ever wondered what files (data sets) a job used?  ALLOCD to the rescue! It will list all the data sets (and UNIX files) that were allocated during
+the running of a job, what their disposition was, and allow you to browse view them if they still exist.
+
+## Instructions ##
 
 Submit a job, for example:
 
@@ -51,7 +69,14 @@ on the item you wish to examine then hit ENTER to browse or F10 to view.
 
 ![Panel](images/ALLOCDP.png)
 
-### PORTSCAN Instructions ###
+### PORTSCAN ###
+
+## Function ##
+
+Ever wondered what server ports are reachable from your mainframe? Been asked by the network guys to check connectivity to a certain port?
+PORTSCAN to the rescue!
+
+## Instructions ##
 
 Type `TSO PORTSCAN`
 
