@@ -1,4 +1,4 @@
-)ATTR DEFAULT(ø+_)
+)ATTR DEFAULT(¢+_)
    $ area(dynamic)  scroll(on)  extend(on)
    + type(text)                 caps(off) skip(on)
    @ type(text)     color(pink) caps(off) skip(on)

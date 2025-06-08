@@ -1,14 +1,17 @@
 /*%NOCOMMENT====================* REXX *===============================*/
-/*     TYPE:  TSO Command                                             */
-/*  PURPOSE:  Display CPU Percentage Utilization                      */
-/*    OWNER:  Operating Systems Services (G-ZOS-Engineering)          */
-/*--------------------------------------------------------------------*/
-/* FLG  YYMMDD  USERID   DESCRIPTION                                  */
-/* ---  ------  -------  -------------------------------------------- */
-/* @A2  210219  S915460  Updated code, make easier to maintain        */
-/* @A1  210218  S915460  Modified displays/code, get to work at WF    */
-/* @A0  210218  S915460  Obtained REXX/panel from CBT1001 (PVCPUPCT)  */
-/*======================================================================*/
+/*     TYPE:  TSO Command                                              */
+/*  PURPOSE:  Display CPU Percentage Utilization                       */
+/*    OWNER:  Operating Systems Services (G-ZOS-Engineering)           */
+/*-------------------------------------------------------------------- */
+/* FLG  YYMMDD  USERID   DESCRIPTION                                   */
+/* ---  ------  -------  --------------------------------------------  */
+/* @A2  210219  S915460  Updated code, make easier to maintain         */
+/* @A1  210218  S915460  Modified displays/code, get to work at WF     */
+/* @A0  210218  S915460  Obtained REXX/panel from CBT1001 (PVCPUPCT)   */
+/*=====================================================================*/
+/* Original code by Peter Vels, Canberra ~ 2016                        */
+/* Neatened and genrally improved by Bruce Koss at Wells Fargo in 2021 */
+
 arg batch
 /* signal on novalue */
 panel     = 'CPUPCT'             /* Display  panel          */
