@@ -2,6 +2,14 @@
 
 This is a work-in-progress.  Please report all errors.  I'm happy to accept pull requests to improve the code and fix bugs.
 
+### PVJCL Instructions ###
+
+Edit or view some JCL, e.g. **SYS1.SAMPLIB(TESTEXIT)**. Enter `PVJCL` as a primary command
+
+![JCL](PVJCL.jcl.png)
+
+![Panel](PVJCL.panel.png)
+
 ### ALLOCD Instructions ###
 
 Submit a job, for example:
