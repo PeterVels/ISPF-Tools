@@ -12,7 +12,9 @@ Wait for it to complete, then in SDSF held output:
 
 - Put a `?` next to the job whose data sets you want to browse or view
 - Use line command `SV` or `SE` (*not S*) on the JESYSMSG line
+
 ![SV](SVcommand.png)
+
 - Issue primary command `ALLOCD` with optional filters:
 
 `ALLOCD {N} {data set filter}`
