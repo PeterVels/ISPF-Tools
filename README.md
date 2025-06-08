@@ -6,22 +6,22 @@ This is a work-in-progress.  Please report all errors.  I'm happy to accept pull
 
 Edit or view some JCL, e.g. **SYS1.SAMPLIB(TESTEXIT)**. Enter `PVJCL` as a primary command
 
-![JCL](PVJCL.jcl.png)
+![JCL](images/PVJCL.jcl.png)
 
-![Panel](PVJCL.panel.png)
+![Panel](images/PVJCL.panel.png)
 
 ### ALLOCD Instructions ###
 
 Submit a job, for example:
 
-![JCL](ALLOCDJ.png)
+![JCL](images/ALLOCDJ.png)
 
 Wait for it to complete, then in SDSF held output:
 
 - Put a `?` next to the job whose data sets you want to browse or view
 - Use line command `SV` or `SE` (*not S*) on the JESYSMSG line
 
-![SV](SVcommand.png)
+![SV](images/SVcommand.png)
 
 - Issue primary command `ALLOCD` with optional filters:
 
@@ -40,7 +40,7 @@ Examples
 Once the data sets and UNIX files are listed, position the cursor
 on the item you wish to examine then hit ENTER to browse or F10 to view.
 
-![Panel](ALLOCDP.png)
+![Panel](images/ALLOCDP.png)
 
 ### PORTSCAN Instructions ###
 
@@ -48,4 +48,4 @@ Type `TSO PORTSCAN`
 
 Enter values for Hostname or IP address and Ports and either Y or N in `Show error lines?` then hit enter.
 
-![Panel](PORTSCAN.panel.png)
+![Panel](images/PORTSCAN.panel.png)

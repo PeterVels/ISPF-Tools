@@ -2,7 +2,7 @@
 black = '09'x
 blue  = '08'x
 white = '03'x
-block = '9F'x
+block = '9F'x  /* This looks better if you set Terminal Type to 6 (3278T) */
 progressBar = 60
 totalFiles = 1020
 address ISPEXEC

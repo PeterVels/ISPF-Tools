@@ -7,12 +7,12 @@ height = zscreend
 lrecl = width * height
 shadow = copies(' ',width * height)
 address TSO
-fernfile = "'USER01.FERNFILE.L"lrecl"'"
+fernfile = "'"userid()".FERN.L"lrecl"'"
 rv = sysdsn(fernfile)
 if rv = 'OK' then
  disp = 'shr'
 else if rv = 'DATASET NOT FOUND' then
- disp= "new catalog lrecl("lrecl") blksize("lrecl" ) tr sp(1 1) vol(user01)"
+ disp= "new catalog lrecl("lrecl") blksize("lrecl" ) tr sp(1 1)"
 "alloc fi(fernfile) da("fernfile")" disp
 if disp = 'shr' then
  do
@@ -43,14 +43,13 @@ else
   address TSO "execio 2 diskW fernfile (finis)"
  end
 address ISPEXEC 'display panel(fern)'
-address TSO "free fi(fernfile"
+address TSO "free fi(fernfile)"
 exit
 
 drawPoint:
   py = map(x, -2.1820, 2.6558, 0, height)
   px = map(y, 0,       9.9830, 0, width )
   offset = width * trunc(py+0.5) + trunc(px+0.5)
-/*shadow = overlay('@',shadow,offset)*/
   shadow = overlay(substr(chars,i // 7 + 1,1),shadow,offset)
   dynvar = overlay('AF'x,dynvar,offset)
 return
