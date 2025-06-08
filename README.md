@@ -1,6 +1,15 @@
-# ISPF Tools mostly written in Rexx #
+# ISPF Tools written in Rexx #
 
-This is a work-in-progress.  Please report all errors.  I'm happy to accept pull requests to improve the code and fix bugs.
+This repository is a rather eclectic collection of some Rexx routines I've written because I've either needed them, or just for fun.
+Please feel free to ask me anything about them, and of course copy them for your own purposes.
+If you fix or improve anything here then please collaborate!
+
+I don't ike writing huge programs, so most of these routines are quite small. Some are edit macros, others are a bit more involved, such as
+CPUPCT, PVJCL, ALLOCD, PORTSCAN and PL.
+
+This is a work-in-progress.  Please report all errors and omissions. If you need more documentation please let me know.
+
+A huge thanks to Lionel Dyck for being such an inspiration.
 
 ### PVJCL Instructions ###
 
