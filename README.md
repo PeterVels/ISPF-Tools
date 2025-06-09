@@ -22,7 +22,7 @@ member you are editing or viewing in a way that is easier to understand.  Essent
 
 It does not expand PROCs.
 
-### Instructions use ###
+### Instructions ###
 
 Edit or view some JCL, e.g. **SYS1.SAMPLIB(TESTEXIT)**. Enter `PVJCL` as a primary command
 
