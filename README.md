@@ -1,4 +1,4 @@
-# ISPF Tools written in Rexx #
+# ISPF Utilities #
 
 This repository is a rather eclectic collection of some Rexx routines I've written because I've either needed them, or just for fun.
 Please feel free to ask me anything about them, and of course copy them for your own purposes.
@@ -18,11 +18,11 @@ A huge thanks to Lionel Dyck for being such an inspiration.
 Ever had to maintain someone else's JCL?  Find it daunting when there are a lot of steps?  PVJCL to the rescue! This edit macro will display the
 member you are editing or viewing in a way that is easier to understand.  Essentially, it gives you an overview.
 
-## Known limitations ##
+### Known limitations ###
 
 It does not expand PROCs.
 
-## Instructions for use ##
+### Instructions use ###
 
 Edit or view some JCL, e.g. **SYS1.SAMPLIB(TESTEXIT)**. Enter `PVJCL` as a primary command
 
@@ -75,6 +75,10 @@ on the item you wish to examine then hit ENTER to browse or F10 to view.
 
 Ever wondered what server ports are reachable from your mainframe? Been asked by the network guys to check connectivity to a certain port?
 PORTSCAN to the rescue!
+
+### Known limitations ###
+
+Some connection attempts take a long time to time out. Be patient!  It shouldn't take more than a minute.
 
 ### Instructions ###
 
