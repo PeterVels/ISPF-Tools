@@ -1,16 +1,27 @@
-/* Rexx to read JESYSMSG allocation output and determine file usage */
-/*   Usage: ALLOCD {N} {data set filter}
+/* Rexx to read viewed JESYSMSG allocation output and determine file usage */
+/*
+   Instructions:
+
+   In SDSF, put a ? next to the job whose output you want to examine
+   Then use line command SV or SE on JESYSMSG line
+   Then issue primary command ALLOCD with optional filters:
+
+            ALLOCD {N} {data set filter}
                     |   |
                     |   |
-   See temp DSNS? ---   --- DSN must contain this string to be displayed
+   List temp DSNS? ---  --- DSN must contain this string to be listed
 
-   Both parms are optional. Parm order does not matter
+   Both parameters are optional. Parameter order does not matter
 
-   e.g. ALLOCD
-        ALLOCD N
-        ALLOCD SYS
-        ALLOCD N SYS
-        ALLOCD PVELS N
+   e.g. ALLOCD           no filter
+        ALLOCD N         do not list temp DSNs
+        ALLOCD SYS       list only DSNs matching 'SYS'
+        ALLOCD N SYS     list DSNs matching SYS but not temp DSNs
+        ALLOCD PVELS N   list DSNs matching PVELS but not temp DSNs
+
+   Once the data sets and UNIX files are listed, position the cursor
+   on the item you wish to examine then hit ENTER to browse or F10 to view.
+
 */
 signal on novalue
 white     = '01'x  /* jobname  and stepname */
@@ -58,8 +69,17 @@ do i = 1 to zlast
   when msg = 'IGD104I' then
    do
     parse var linedata 'IGD104I' retained . 'DDNAME=' ddname .
-    if checkShow(retained) then
-     dynvar = dynvar || left(yellow left(retained,50) ddname, 80)
+    if retained = 'UNIX' then
+     do
+      parse var linedata . 'DDNAME IS (' ddname .
+      i = i + 1
+      '(linedata) = line' i
+      parse var linedata 'FILENAME IS (' unixfile ')'
+      dynvar = dynvar || left(yellow left(unixfile,50) ddname, 80)
+     end
+    else
+     if checkShow(retained) then
+      dynvar = dynvar || left(yellow left(retained,50) ddname, 80)
    end
   when msg = 'IGD105I' then
    do
@@ -155,13 +175,22 @@ if cursline > 1 then
   if left(dsn,1) <> '(' then
    do
     "control errors return"
-    msg = sysdsn("'"dsn"'")
+    if left(dsn,1) = '/' then
+     msg = 'OK'
+    else
+     msg = sysdsn("'"dsn"'")
     if msg = 'OK' then
      do
       if pfkey = 'PF10' then
-       "view dataset('"dsn"')"
+       if left(dsn,1) <> '/' then
+        "view dataset('"dsn"')"
+       else
+        address TSO "oview" dsn
       else
-       "browse dataset('"dsn"')"
+       if left(dsn,1) <> '/' then
+        "browse dataset('"dsn"')"
+       else
+        address TSO "obrowse" dsn
       if RC = 12 then
        do
         zedsmsg = 'Empty data set'
